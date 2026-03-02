@@ -1,0 +1,30 @@
+# --- Build and Install Artifacts ---
+build/
+install/
+log/
+
+# --- Python Specific ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.tst/
+
+# --- Local User Configurations ---
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# --- ROS 2 / Colcon Specific ---
+colcon_ignore
+.colcon/
+
+# --- C++ / Compiled Binaries ---
+*.o
+*.so
+*.a
+
+# TF frames output
+frames_*
