@@ -1,4 +1,4 @@
-# Production Bridge Config (Modern Gazebo)
+# moma_gazebo/config/ros_gz_bridge.yaml
 ---
 - ros_topic_name: "/clock"
   gz_topic_name: "/clock"
@@ -6,8 +6,9 @@
   gz_type_name: "gz.msgs.Clock"
   direction: GZ_TO_ROS
 
+# MiR joints — wheels, casters, etc. (come from Gazebo physics directly)
 - ros_topic_name: "/joint_states"
-  gz_topic_name: "/world/empty/model/moma_robot/joint_state"
+  gz_topic_name: "/joint_states"
   ros_type_name: "sensor_msgs/msg/JointState"
   gz_type_name: "gz.msgs.Model"
   direction: GZ_TO_ROS
