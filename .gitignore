@@ -26,5 +26,6 @@ colcon_ignore
 *.so
 *.a
 
-# TF frames output
-frames_*
+# TF2 Tools View Frames output
+*.gv
+*.pdf

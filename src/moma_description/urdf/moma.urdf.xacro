@@ -5,9 +5,9 @@
   <!-- 0. DYNAMIC MOUNT BOX PARAMETERS            -->
   <!-- ========================================== -->
   <!-- These can be overridden in the launch file -->
-  <xacro:arg name="box_length" default="0.5" />
-  <xacro:arg name="box_width" default="0.4" />
-  <xacro:arg name="box_height" default="0.25" />
+  <xacro:arg name="box_length" default="0.81" />
+  <xacro:arg name="box_width" default="0.45" />
+  <xacro:arg name="box_height" default="0.555" />
   <xacro:arg name="mir_top_height" default="0.35" /> <!-- Approx height of MiR surface -->
 
   <!-- ========================================== -->
@@ -64,22 +64,30 @@
     Instantiate the UR5e Arm on top of the box.
   -->
   <xacro:ur_robot
-    name="ur5e"
+    name="ur10e"
     tf_prefix="ur_"
     parent="mount_box_link"
-    joint_limits_parameters_file="$(find ur_description)/config/ur5e/joint_limits.yaml"
-    kinematics_parameters_file="$(find ur_description)/config/ur5e/default_kinematics.yaml"
-    physical_parameters_file="$(find ur_description)/config/ur5e/physical_parameters.yaml"
-    visual_parameters_file="$(find ur_description)/config/ur5e/visual_parameters.yaml"
+    joint_limits_parameters_file="$(find ur_description)/config/ur10e/joint_limits.yaml"
+    kinematics_parameters_file="$(find ur_description)/config/ur10e/default_kinematics.yaml"
+    physical_parameters_file="$(find ur_description)/config/ur10e/physical_parameters.yaml"
+    visual_parameters_file="$(find ur_description)/config/ur10e/visual_parameters.yaml"
     use_fake_hardware="false"
-    sim_gazebo="true"
-    initial_positions="${dict(shoulder_pan_joint=0.0, shoulder_lift_joint=-1.57, elbow_joint=0.0, wrist_1_joint=-1.57, wrist_2_joint=0.0, wrist_3_joint=0.0)}">
+    sim_ignition="true"
+    initial_positions="${dict(shoulder_pan_joint=0.0, shoulder_lift_joint= -1.57 , elbow_joint=0.0, wrist_1_joint=0.0, wrist_2_joint=0.0, wrist_3_joint=1.57)}">
     
     <!-- 
       The Z offset here is EXACTLY the height of the box. 
       This guarantees the arm sits flush on the top surface.
     -->
-    <origin xyz="0.0 0.0 $(arg box_height)" rpy="0 0 0" />
+    <origin xyz="${$(arg box_length)/2 - 0.087 - 0.013} 0.0 $(arg box_height)" rpy="0 0 0" />
   </xacro:ur_robot>
+
+  <!-- Point the Ignition plugin at the existing ur_simulation_gz controllers yaml -->
+  <gazebo>
+    <plugin filename="ign_ros2_control-system"
+            name="ign_ros2_control::IgnitionROS2ControlPlugin">
+      <parameters>$(find ur_simulation_gz)/config/ur_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
 
 </robot>

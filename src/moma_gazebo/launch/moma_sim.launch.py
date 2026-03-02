@@ -5,6 +5,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, AppendEnvironmentVariable
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch.actions import TimerAction
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -54,11 +55,29 @@ def generate_launch_description():
         output='screen'
     )
 
+    # controller_manager = Node(
+    #     package = 'controller_manager',
+    #     executable = 'spawner',
+    #     arguments=['joint_state_broadcaster',
+    #            '--controller-manager', '/controller_manager'],
+    #     remappings=[
+    #     ('/joint_states', '/ur/joint_states'),  # ← key remap
+    #     ],
+
+    #     output='screen',
+    # )
+
+    # delayed_controller = TimerAction(
+    #     period=5.0,
+    #     actions=[controller_manager]
+    # )
+
     return LaunchDescription([
         DeclareLaunchArgument('bridge_config', default_value=PathJoinSubstitution([moma_gz_dir, 'config', 'ros_gz_bridge.yaml'])),
         set_ign_resource_path,
         set_gz_resource_path,
         gz_sim,
         gz_spawn_entity,
-        gz_bridge
+        gz_bridge,
+        # delayed_controller
     ])

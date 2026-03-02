@@ -8,8 +8,18 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 
+# Install Python executable
 install(
-  DIRECTORY launch config 
+  PROGRAMS
+    scripts/joint_state_merger.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+# Install launch and config folders
+install(
+  DIRECTORY
+    launch
+    config
   DESTINATION share/${PROJECT_NAME}
 )
 
