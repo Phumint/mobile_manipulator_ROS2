@@ -32,24 +32,23 @@ def generate_launch_description():
         executable='spawner',
         arguments=['joint_state_broadcaster',
                    '--controller-manager', '/controller_manager'],
-        # remappings=[('/joint_states', '/ur/joint_states')],
         parameters= [{'use_sim_time': use_sim}]
     )
 
-    # # 4. Gazebo-ROS Bridge for MiR Joint States
-    # gazebo_bridge = Node(
-    #     package='ros_gz_bridge', 
-    #     executable='parameter_bridge',
-    #     arguments=[
-    #         '/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model'
-    #     ],
-    #     output='screen'
-    # )
+    common_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([FindPackageShare('moma_bringup'), 'launch', 'moma_common.launch.py'])
+        ),
+        launch_arguments={
+            'use_sim_time': use_sim,
+            'use_sim': use_sim  # Pass the flag down so common.launch knows what to spin up
+        }.items()
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim', default_value='true', description='Launch Gazebo simulation'),
         rsp_launch,
+        common_launch,
         gazebo_launch,
-        # gazebo_bridge,
         TimerAction(period = 5.0, actions = [joint_state_broadcaster_spawner]),
     ])
