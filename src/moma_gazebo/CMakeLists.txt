@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 
 install(
-  DIRECTORY config include launch src worlds 
+  DIRECTORY config include launch src worlds models
   DESTINATION share/${PROJECT_NAME}
 )
 
