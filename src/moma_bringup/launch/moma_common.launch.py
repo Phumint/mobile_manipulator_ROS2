@@ -1,7 +1,8 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -23,7 +24,20 @@ def generate_launch_description():
         parameters=[
             PathJoinSubstitution([FindPackageShare('mir_gazebo'), 'config', 'laser_merger_params.yaml']),
             {'use_sim_time': use_sim_time}
-        ]
+        ],
+        remappings=[
+        ('/merged', '/scan')
+        ]   
+    )
+
+    # Start the EKF Localization Node
+    # CONDITION: Only run this in simulation. The real MiR provides pre-fused /odom.
+    ekf_localization_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([FindPackageShare('moma_navigation'), 'launch', 'localization.launch.py'])
+        ),
+        condition=IfCondition(use_sim),
+        launch_arguments={'use_sim_time': use_sim_time}.items()
     )
 
     # In the future, other common nodes go here. For example:
@@ -32,5 +46,6 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
         DeclareLaunchArgument('use_sim', default_value='true', description='Is this a simulation?'),
-        laser_merger_node
+        laser_merger_node,
+        ekf_localization_launch
     ])
