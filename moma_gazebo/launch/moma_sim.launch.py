@@ -13,30 +13,33 @@ def generate_launch_description():
     moma_gz_dir = FindPackageShare('moma_gazebo')
     bridge_config = LaunchConfiguration('bridge_config')
 
-    # --- DYNAMIC RESOURCE PATH SETUP ---
-    # get_package_share_directory returns: /.../install/mir_description/share/mir_description
-    # We need the parent directory so Gazebo can resolve "model://mir_description/..."
+    # Get MiR models path
     mir_pkg_share = get_package_share_directory('mir_description')
     mir_models_path = os.path.dirname(mir_pkg_share)
 
+    # ADDED: Get the MOMA models path (where room_map_demo lives)
+    moma_models_path = os.path.join(get_package_share_directory('moma_gazebo'), 'models')
+
+    # ADDED: Combine both paths with a colon ':' separator
+    combined_resource_paths = f"{mir_models_path}:{moma_models_path}"
+
     set_ign_resource_path = AppendEnvironmentVariable(
         name='IGN_GAZEBO_RESOURCE_PATH',
-        value=mir_models_path
+        value=combined_resource_paths
     )
-    
-    # Adding GZ_SIM_RESOURCE_PATH for future-proofing in case you upgrade to Gazebo Harmonic/Garden
-    set_gz_resource_path = AppendEnvironmentVariable(
-        name='GZ_SIM_RESOURCE_PATH',
-        value=mir_models_path
-    )
-    # -----------------------------------
+
+    world_path = PathJoinSubstitution([
+        moma_gz_dir,
+        'worlds',
+        'demo_room.world.sdf'
+    ])
 
     # Start Gazebo Simulator
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare('ros_gz_sim'), 'launch', 'gz_sim.launch.py'])
         ),
-        launch_arguments={'gz_args': '-r -v 4 empty.sdf'}.items()
+        launch_arguments={'gz_args': ['-r ', world_path]}.items()
     )
 
     # Spawn Robot
@@ -55,29 +58,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    # controller_manager = Node(
-    #     package = 'controller_manager',
-    #     executable = 'spawner',
-    #     arguments=['joint_state_broadcaster',
-    #            '--controller-manager', '/controller_manager'],
-    #     remappings=[
-    #     ('/joint_states', '/ur/joint_states'),  # ← key remap
-    #     ],
-
-    #     output='screen',
-    # )
-
-    # delayed_controller = TimerAction(
-    #     period=5.0,
-    #     actions=[controller_manager]
-    # )
-
     return LaunchDescription([
         DeclareLaunchArgument('bridge_config', default_value=PathJoinSubstitution([moma_gz_dir, 'config', 'ros_gz_bridge.yaml'])),
         set_ign_resource_path,
-        set_gz_resource_path,
         gz_sim,
         gz_spawn_entity,
         gz_bridge,
-        # delayed_controller
     ])
