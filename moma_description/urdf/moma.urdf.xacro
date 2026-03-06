@@ -8,6 +8,7 @@
   <xacro:arg name="box_length" default="0.81" />
   <xacro:arg name="box_width" default="0.45" />
   <xacro:arg name="box_height" default="0.555" />
+  <xacro:arg name="box_mass" default="15.0" />
   <xacro:arg name="mir_top_height" default="0.35" /> <!-- Approx height of MiR surface -->
 
   <!-- ========================================== -->
@@ -45,7 +46,7 @@
     <!-- Inertia is REQUIRED for Gazebo, otherwise the box falls through the floor -->
     <inertial>
       <origin xyz="0 0 ${$(arg box_height) / 2.0}" rpy="0 0 0" />
-      <mass value="20.0" />
+      <mass value="$(arg box_mass)" />
       <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="0.5" iyz="0.0" izz="0.5" />
     </inertial>
   </link>
