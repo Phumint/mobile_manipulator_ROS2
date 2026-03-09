@@ -1,8 +1,10 @@
 import os
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from nav2_common.launch import RewrittenYaml
 
@@ -16,6 +18,7 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart')
     params_file = LaunchConfiguration('params_file')
     map_yaml_file = LaunchConfiguration('map')
+    use_rviz = LaunchConfiguration('use_rviz', default='true')
 
     # --- The "Agnostic" Magic: RewrittenYaml ---
     # This automatically intercepts the YAML file and overwrites 'use_sim_time' 
@@ -45,6 +48,19 @@ def generate_launch_description():
         }.items()
     )
 
+    # --- RViz2 Node ---
+    rviz_config_file = PathJoinSubstitution([moma_nav_dir, 'rviz', 'rviz_config.rviz'])
+    
+    rviz_node = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        output='screen',
+        arguments=['-d', rviz_config_file],
+        parameters=[{'use_sim_time': use_sim_time}],
+        condition=IfCondition(use_rviz)
+    )
+
     return LaunchDescription([
         # Declare arguments so they can be overridden via CLI
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'),
@@ -53,5 +69,6 @@ def generate_launch_description():
         # Require a map to be passed in
         DeclareLaunchArgument('map', default_value='', description='Full path to map yaml file to load'),
         
-        bringup_cmd
+        bringup_cmd,
+        rviz_node
     ])
