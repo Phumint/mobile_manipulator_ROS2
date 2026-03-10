@@ -29,7 +29,7 @@ map_saver:
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 20.0
+    controller_frequency: 10.0 #previously 20
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -54,13 +54,13 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.8 
+      max_vel_x: 1.0
       max_vel_y: 0.0
-      max_vel_theta: 0.6
+      max_vel_theta: 1.0
       min_speed_xy: 0.0
-      max_speed_xy: 0.45
+      max_speed_xy: 0.8
       min_speed_theta: 0.0
-      acc_lim_x: 0.8
+      acc_lim_x: 1.0
       acc_lim_y: 0.0
       acc_lim_theta: 1.2
       decel_lim_x: -0.8
@@ -80,7 +80,7 @@ controller_server:
       # FIXED: Added required Critics for DWBLocalPlanner
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle:
-        scale: 0.02
+        scale: 0.1
       PathAlign:
         scale: 32.0
         forward_point_distance: 0.1
@@ -202,7 +202,7 @@ bt_navigator:
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
-    bt_loop_duration: 10
+    bt_loop_duration: 100
     default_server_timeout: 20
 
 waypoint_follower:
@@ -217,9 +217,9 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [0.45, 0.0, 0.6]
+    max_velocity: [1.0, 0.0, 1.0]
     min_velocity: [-0.45, 0.0, -0.6]
-    max_accel: [0.8, 0.0, 1.2]
+    max_accel: [1.0, 0.0, 1.2]
     max_decel: [-0.8, 0.0, -1.2]
     odom_topic: "odom"
     odom_duration: 0.1
