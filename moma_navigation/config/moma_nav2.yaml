@@ -1,17 +1,49 @@
 amcl:
   ros__parameters:
     use_sim_time: True
-    alpha1: 0.2
-    alpha2: 0.2
-    alpha3: 0.2
-    alpha4: 0.2
-    alpha5: 0.2
+    
+    # --- Frame IDs & Topics (Your Setup) ---
     base_frame_id: "base_footprint"
     global_frame_id: "map"
     odom_frame_id: "odom"
     scan_topic: "/scan"
-    max_particles: 3000
+    
+    # --- Initial Pose ---
+    # Since you have set_initial_pose to true, you must provide the coordinates,
+    # otherwise AMCL might throw warnings or default to 0,0,0 anyway.
     set_initial_pose: true
+    initial_pose: {x: 0.0, y: 0.0, z: 0.0, yaw: 0.0} 
+    
+    # --- 1. Odometry Model (The Fix for the Jitters) ---
+    # We are dropping your 0.2 values down to trust your EKF!
+    robot_model_type: "nav2_amcl::DifferentialMotionModel" # Use "nav2_amcl::OmnidirectionalMotionModel" if mecanum
+    alpha1: 0.05 # Was 0.2
+    alpha2: 0.05 # Was 0.2
+    alpha3: 0.10 # Was 0.2
+    alpha4: 0.05 # Was 0.2
+    alpha5: 0.05 # Was 0.2 (Note: alpha5 is ONLY used if you set Omnidirectional above)
+    
+    # --- 2. Particle Filter Efficiency ---
+    # Dropped max from 3000 to 2000 to save CPU. Your good odometry doesn't need 3000.
+    min_particles: 500
+    max_particles: 2000 
+    update_min_d: 0.20 # Update AMCL every 20cm
+    update_min_a: 0.20 # Update AMCL every ~11 degrees
+    pf_err: 0.05
+    pf_z: 0.99
+    
+    # --- 3. Laser Model (Crucial additions missing from your config) ---
+    # These tell AMCL how to actually interpret your 360-degree merged scan
+    laser_model_type: "likelihood_field"
+    laser_max_beams: 144 # Look at 144 points per scan instead of the default 60
+    laser_z_hit: 0.90
+    laser_z_short: 0.05
+    laser_z_max: 0.05
+    laser_z_rand: 0.05
+    laser_likelihood_max_dist: 2.0
+    
+    # --- 4. System ---
+    transform_tolerance: 1.0 # Buffer for TF tree lag
 
 map_server:
   ros__parameters:
@@ -54,11 +86,11 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 1.0
+      max_vel_x: 0.5
       max_vel_y: 0.0
-      max_vel_theta: 1.0
+      max_vel_theta: 0.5
       min_speed_xy: 0.0
-      max_speed_xy: 0.8
+      max_speed_xy: 0.5
       min_speed_theta: 0.0
       acc_lim_x: 1.0
       acc_lim_y: 0.0
@@ -217,9 +249,9 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 0.0, 1.0]
+    max_velocity: [0.5, 0.0, 0.5]
     min_velocity: [-0.45, 0.0, -0.6]
-    max_accel: [1.0, 0.0, 1.2]
+    max_accel: [0.7, 0.0, 0.7]
     max_decel: [-0.8, 0.0, -1.2]
     odom_topic: "odom"
     odom_duration: 0.1
