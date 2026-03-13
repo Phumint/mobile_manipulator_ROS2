@@ -2,33 +2,45 @@
 <robot xmlns:xacro="http://ros.org/wiki/xacro" name="moma_robot">
 
   <!-- ========================================== -->
-  <!-- 0. DYNAMIC MOUNT BOX PARAMETERS            -->
+  <!-- 0. ARGUMENTS                               -->
   <!-- ========================================== -->
-  <!-- These can be overridden in the launch file -->
   <xacro:arg name="box_length" default="0.81" />
   <xacro:arg name="box_width" default="0.45" />
   <xacro:arg name="box_height" default="0.555" />
   <xacro:arg name="box_mass" default="15.0" />
-  <xacro:arg name="mir_top_height" default="0.35" /> <!-- Approx height of MiR surface -->
+  <xacro:arg name="mir_top_height" default="0.35" />
+
+  <xacro:arg name="sim_ignition" default="false" />
+  <xacro:arg name="sim_gazebo" default="false" />
+  <xacro:arg name="use_fake_hardware" default="false" />
+
+  <!-- UR Real Hardware Args -->
+  <!-- Use placeholder defaults — ur_control.launch.py fills these at runtime -->
+  <xacro:arg name="robot_ip" default="192.168.12.120" />
+  <xacro:arg name="script_filename"          default="to_be_filled_by_ur_robot_driver" />
+  <xacro:arg name="input_recipe_filename"    default="to_be_filled_by_ur_robot_driver" />
+  <xacro:arg name="output_recipe_filename"   default="to_be_filled_by_ur_robot_driver" />
+
+  <!-- Calibration: default to your real file, overridable by ur_control.launch.py -->
+  <xacro:arg name="kinematics_parameters_file"
+    default="$(find moma_description)/config/ur10e_calibration.yaml" />
 
   <!-- ========================================== -->
-  <!-- 1. INCLUDE THE MIR BASE                    -->
+  <!-- 1. INCLUDE MIR BASE                        -->
   <!-- ========================================== -->
   <xacro:include filename="$(find mir_description)/urdf/mir.urdf.xacro" />
 
   <!-- ========================================== -->
-  <!-- 2. THE MOUNTING BOX (THE "SURFACE")        -->
+  <!-- 2. THE MOUNTING BOX                        -->
   <!-- ========================================== -->
   <joint name="mount_box_joint" type="fixed">
     <parent link="base_link" />
     <child link="mount_box_link" />
-    <!-- Place the bottom of the box exactly on the MiR top surface -->
     <origin xyz="0 0 $(arg mir_top_height)" rpy="0 0 0" />
   </joint>
 
   <link name="mount_box_link">
     <visual>
-      <!-- Visual origin is shifted up by half height so the base sits at Z=0 of the joint -->
       <origin xyz="0 0 ${$(arg box_height) / 2.0}" rpy="0 0 0" />
       <geometry>
         <box size="$(arg box_length) $(arg box_width) $(arg box_height)" />
@@ -43,7 +55,6 @@
         <box size="$(arg box_length) $(arg box_width) $(arg box_height)" />
       </geometry>
     </collision>
-    <!-- Inertia is REQUIRED for Gazebo, otherwise the box falls through the floor -->
     <inertial>
       <origin xyz="0 0 ${$(arg box_height) / 2.0}" rpy="0 0 0" />
       <mass value="$(arg box_mass)" />
@@ -51,44 +62,43 @@
     </inertial>
   </link>
 
-  <!-- Tell Gazebo to render the box grey -->
   <gazebo reference="mount_box_link">
     <material>Gazebo/DarkGrey</material>
   </gazebo>
 
   <!-- ========================================== -->
-  <!-- 3. INCLUDE THE UNIVERSAL ROBOT             -->
+  <!-- 3. INCLUDE & INSTANTIATE THE UR ARM        -->
   <!-- ========================================== -->
   <xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro" />
 
-  <!-- 
-    Instantiate the UR5e Arm on top of the box.
-  -->
   <xacro:ur_robot
     name="ur10e"
     tf_prefix="ur_"
     parent="mount_box_link"
     joint_limits_parameters_file="$(find ur_description)/config/ur10e/joint_limits.yaml"
-    kinematics_parameters_file="$(find ur_description)/config/ur10e/default_kinematics.yaml"
+    kinematics_parameters_file="$(arg kinematics_parameters_file)"
     physical_parameters_file="$(find ur_description)/config/ur10e/physical_parameters.yaml"
     visual_parameters_file="$(find ur_description)/config/ur10e/visual_parameters.yaml"
-    use_fake_hardware="false"
-    sim_ignition="true"
-    initial_positions="${dict(shoulder_pan_joint=0.0, shoulder_lift_joint= -1.57 , elbow_joint=0.0, wrist_1_joint=0.0, wrist_2_joint=0.0, wrist_3_joint=1.57)}">
-    
-    <!-- 
-      The Z offset here is EXACTLY the height of the box. 
-      This guarantees the arm sits flush on the top surface.
-    -->
-    <origin xyz="${$(arg box_length)/2 - 0.087 - 0.013} 0.0 $(arg box_height)" rpy="0 0 0" />
+    use_fake_hardware="$(arg use_fake_hardware)"
+    sim_ignition="$(arg sim_ignition)"
+    robot_ip="$(arg robot_ip)"
+    script_filename="$(arg script_filename)"
+    input_recipe_filename="$(arg input_recipe_filename)"
+    output_recipe_filename="$(arg output_recipe_filename)"
+    initial_positions="${dict(shoulder_pan_joint=0.0, shoulder_lift_joint=-1.57, elbow_joint=0.0, wrist_1_joint=0.0, wrist_2_joint=0.0, wrist_3_joint=1.57)}">
+    <origin xyz="${$(arg box_length)/2 - 0.087 - 0.013} 0.0 $(arg box_height)" rpy="0 0 3.14159" />
   </xacro:ur_robot>
 
-  <!-- Point the Ignition plugin at the existing ur_simulation_gz controllers yaml -->
-  <gazebo>
-    <plugin filename="ign_ros2_control-system"
-            name="ign_ros2_control::IgnitionROS2ControlPlugin">
-      <parameters>$(find ur_simulation_gz)/config/ur_controllers.yaml</parameters>
-    </plugin>
-  </gazebo>
+  <!-- ========================================== -->
+  <!-- 4. GAZEBO PLUGINS                          -->
+  <!-- ========================================== -->
+  <xacro:if value="$(arg sim_ignition)">
+    <gazebo>
+      <plugin filename="ign_ros2_control-system"
+              name="ign_ros2_control::IgnitionROS2ControlPlugin">
+        <parameters>$(find ur_simulation_gz)/config/ur_controllers.yaml</parameters>
+      </plugin>
+    </gazebo>
+  </xacro:if>
 
 </robot>

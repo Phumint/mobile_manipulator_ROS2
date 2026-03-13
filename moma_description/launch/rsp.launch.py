@@ -14,7 +14,8 @@ def generate_launch_description():
     urdf_file = os.path.join(moma_desc_path, 'urdf', 'moma.urdf.xacro')
     
     robot_description_content = Command([
-        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ', urdf_file
+        PathJoinSubstitution([FindExecutable(name='xacro')]), ' ', urdf_file,
+        ' sim_ignition:=', use_sim_time, 
     ])
 
     # Node
