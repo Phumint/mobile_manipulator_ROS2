@@ -3,7 +3,7 @@ slam_toolbox:
     # Frame Names
     odom_frame: odom
     map_frame: map
-    base_frame: base_link
+    base_frame: base_footprint
     scan_topic: /scan
     
     # SLAM Mode
@@ -23,22 +23,32 @@ slam_toolbox:
     ceres_preconditioner: SCHUR_JACOBI
     ceres_trust_region_strategy: LEVENBERG_MARQUARDT
     ceres_dogleg_type: TRADITIONAL_DOGLEG
-    ceres_loss_function: None
+    ceres_loss_function: HuberLoss
 
     # ROS Parameters
     odom_tracker_plugin: "slam_toolbox::tracking_plugins::OdomTracker"
     transform_publish_period: 0.02 # Publish the map->odom transform at 50Hz
     
     # Tuning: How far the robot needs to move/rotate to trigger a laser scan match
-    minimum_travel_distance: 0.2
-    minimum_travel_heading: 0.2
+    minimum_travel_distance: 0.4
+    minimum_travel_heading: 0.4
 
     # Lidar properties (Matching your S300 and merged scan)
     max_laser_range: 25.0 # S300 max range is around 29, but keeping it slightly lower helps accuracy
-    minimum_time_interval: 0.1 
-    transform_timeout: 0.2
+    minimum_time_interval: 0.5 
+    transform_timeout: 0.5
     tf_buffer_duration: 10.0
     stack_size_to_use: 40000000 
+
+    # These parameters force the matcher to look at the "center of mass" of the scan,
+    # helping it look past the thin chair legs to the solid walls behind them.
+    use_scan_matching: true
+    use_scan_barycenter: true 
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+    distance_variance_penalty: 0.5 # Trust wheel odometry a bit more when LiDAR gets confused by chairs
+    angle_variance_penalty: 0.5
     
     # Loop Closure (How it recognizes a room it has already been to)
     do_loop_closing: true
