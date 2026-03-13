@@ -31,7 +31,7 @@ def generate_launch_description():
     world_path = PathJoinSubstitution([
         moma_gz_dir,
         'worlds',
-        'object_demo.world.sdf'
+        'demo_room.world.sdf'
     ])
 
     # Start Gazebo Simulator
