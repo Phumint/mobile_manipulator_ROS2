@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Nav2 Custom Path Drawer</title>
+    <script src="https://code.createjs.com/1.0.0/easeljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eventemitter2@6.4.9/lib/eventemitter2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/roslib/build/roslib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ros2d/build/ros2d.min.js"></script>
+    
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #map-container { border: 2px solid #ccc; display: inline-block; margin-bottom: 10px; cursor: crosshair; }
+        .controls { margin-top: 10px; }
+        button { padding: 10px 20px; font-size: 16px; margin-right: 10px; cursor: pointer; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <h2>Nav2 Path Drawer</h2>
+    <div id="status">Connecting to ROSBridge...</div>
+    
+    <div id="map-container"></div>
+    
+    <div class="controls">
+        <button id="publishBtn" disabled>Publish Path</button>
+        <button id="retryBtn" disabled>Retry Drawing</button>
+    </div>
+
+    <script>
+        // 1. UI Elements
+        const statusEl = document.getElementById('status');
+        const publishBtn = document.getElementById('publishBtn');
+        const retryBtn = document.getElementById('retryBtn');
+
+        // 2. Setup ROS Connection
+        const ros = new ROSLIB.Ros({
+            url : 'ws://localhost:9090' // Change this if your robot's IP is different
+        });
+
+        ros.on('connection', () => { statusEl.innerText = 'Connected to ROSBridge.'; });
+        ros.on('error', (error) => { statusEl.innerText = 'Error connecting to websocket.'; });
+        ros.on('close', () => { statusEl.innerText = 'Connection to websocket closed.'; });
+
+        // Setup the Publisher for the raw coordinates
+        const pathTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_drawn_path_raw',
+            messageType : 'std_msgs/String' // Sending as JSON string for simplicity parsing in Python
+        });
+
+        // 3. Setup ROS2D Viewer & Map
+        const viewer = new ROS2D.Viewer({
+            divID : 'map-container',
+            width : 800,
+            height : 800
+        });
+
+        const gridClient = new ROS2D.OccupancyGridClient({
+            ros : ros,
+            rootObject : viewer.scene,
+            continuous: true // Updates if the map changes
+        });
+
+        // Center map once it loads
+        gridClient.on('change', () => {
+            viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+            viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+        });
+
+        // 4. Drawing Logic using EaselJS
+        const pathShape = new createjs.Shape();
+        viewer.scene.addChild(pathShape); // Add our drawing layer on top of the map
+
+        let isDrawing = false;
+        let pathPoints = []; // Stores the real-world ROS coordinates
+
+        // Mouse Down: Start Drawing
+        viewer.scene.on('stagemousedown', (event) => {
+            // Prevent drawing a new line if one already exists (force them to retry/publish)
+            if (pathPoints.length > 0) return; 
+
+            isDrawing = true;
+            
+            // globalToLocal converts screen pixels directly into ROS Map coordinates (meters)
+            const rosCoords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+            pathPoints.push({ x: rosCoords.x, y: -rosCoords.y });
+
+            pathShape.graphics.clear();
+            pathShape.graphics.beginStroke("green").setStrokeStyle(0.05, "round", "round"); // Stroke width in map units
+            pathShape.graphics.moveTo(rosCoords.x, rosCoords.y);
+        });
+
+        // Mouse Move: Draw the Line
+        viewer.scene.on('stagemousemove', (event) => {
+            if (!isDrawing) return;
+
+            const rosCoords = viewer.scene.globalToLocal(event.stageX, event.stageY);
+            pathPoints.push({ x: rosCoords.x, y: -rosCoords.y });
+
+            pathShape.graphics.lineTo(rosCoords.x, rosCoords.y);
+        });
+
+        // Mouse Up: Stop Drawing and Prompt User
+        viewer.scene.on('stagemouseup', () => {
+            if (!isDrawing) return;
+            isDrawing = false;
+            
+            // Enable UI buttons
+            publishBtn.disabled = false;
+            retryBtn.disabled = false;
+        });
+
+        // 5. Button Actions
+        retryBtn.addEventListener('click', () => {
+            pathShape.graphics.clear(); // Clear the green line
+            pathPoints = [];            // Clear the saved coordinates
+            
+            publishBtn.disabled = true;
+            retryBtn.disabled = true;
+        });
+
+        publishBtn.addEventListener('click', () => {
+            if (pathPoints.length === 0) return;
+
+            // Publish the array of points as a JSON string
+            const message = new ROSLIB.Message({
+                data: JSON.stringify(pathPoints)
+            });
+            pathTopic.publish(message);
+
+            statusEl.innerText = `Path with ${pathPoints.length} points published!`;
+            
+            // Optionally clear the path and disable buttons after publishing, or leave it visible
+            publishBtn.disabled = true;
+        });
+    </script>
+</body>
+</html>

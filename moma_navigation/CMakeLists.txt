@@ -13,8 +13,13 @@ find_package(nav2_common REQUIRED)
 find_package(slam_toolbox REQUIRED)
 
 install(
-  DIRECTORY config include launch src maps rviz
+  DIRECTORY config include launch src maps rviz web
   DESTINATION share/${PROJECT_NAME}
+)
+
+install(PROGRAMS
+  src/path_drawer_node.py
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()
