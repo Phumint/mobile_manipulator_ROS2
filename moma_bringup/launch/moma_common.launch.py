@@ -1,6 +1,6 @@
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
 from launch.conditions import IfCondition, UnlessCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -53,6 +53,7 @@ def generate_launch_description():
     # =========================================================
 
     # 1. MiR Real Hardware Driver
+    # MiR Real Hardware Driver
     mir_driver_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([FindPackageShare('mir_driver_bridge'), 'launch', 'mir.launch.py'])
@@ -60,6 +61,7 @@ def generate_launch_description():
         condition=UnlessCondition(use_sim),
         launch_arguments={
             'mir_ip': mir_ip,
+            'start_rsp': 'false',  # <--- This kills the rogue publisher!
         }.items()
     )
 
@@ -83,15 +85,26 @@ def generate_launch_description():
         }.items()
     )
 
-    # twist_mux (used in both sim and real) would NOT have an IfCondition.
+    # =========================================================
+    # DELAY ACTIONS (Using TimerAction to stagger startup)
+    # =========================================================
+    
+    # Delay sim nodes
+    delay_laser_merger = TimerAction(period=2.0, actions=[laser_merger_node])
+    delay_ekf = TimerAction(period=5.0, actions=[ekf_localization_launch])
+    
+    # Delay hardware drivers
+    delay_mir_driver = TimerAction(period=6.0, actions=[mir_driver_launch])
+    delay_ur_driver = TimerAction(period=10.0, actions=[ur_driver_launch])
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
         DeclareLaunchArgument('use_sim', default_value='true', description='Is this a simulation?'),
         DeclareLaunchArgument('mir_ip', default_value='192.168.12.20', description='IP of the real MiR'),
         DeclareLaunchArgument('ur_robot_ip', default_value='192.168.12.120', description='IP of the real UR arm'),
-        laser_merger_node,
-        ekf_localization_launch,
-        mir_driver_launch,
-        ur_driver_launch
+        
+        delay_laser_merger,
+        delay_ekf,
+        delay_mir_driver,
+        delay_ur_driver
     ])
