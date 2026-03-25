@@ -58,10 +58,19 @@ def generate_launch_description():
         output='screen'
     )
 
+    start_covariance_fixer = Node(
+        package='moma_gazebo',
+        executable='covariance_fixer_node.py',
+        name='covariance_fixer_node',
+        output='screen',
+        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument('bridge_config', default_value=PathJoinSubstitution([moma_gz_dir, 'config', 'ros_gz_bridge.yaml'])),
         set_ign_resource_path,
         gz_sim,
         gz_spawn_entity,
         gz_bridge,
+        start_covariance_fixer,
     ])
