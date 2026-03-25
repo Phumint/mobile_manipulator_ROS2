@@ -4,32 +4,28 @@ ekf_filter_node:
     frequency: 50.0
     two_d_mode: true
     publish_tf: true
-    
-    # Frame definitions (Hardware agnostic standard)
+
     map_frame: map
     odom_frame: odom
     base_link_frame: base_footprint  # Change to base_link if your robot doesn't use a footprint
     world_frame: odom
 
-    # 1. Wheel Odometry (from Gazebo DiffDrive)
-    odom0: /odom
-    # We only trust the wheels for: X velocity, Y velocity, and Yaw velocity
     # Order: [x, y, z, roll, pitch, yaw, vx, vy, vz, vroll, vpitch, vyaw, ax, ay, az]
+    odom0: /odom/fixed
     odom0_config: [false, false, false,
                    false, false, false,
-                   true,  true,  false,
+                   true,  false, false,
                    false, false, true,
                    false, false, false]
     odom0_differential: false
+    odom0_relative: false
 
-    # 2. IMU Data (from Gazebo IMU Plugin)
-    imu0: /imu
-    # We strictly trust the IMU for Yaw velocity (Z-axis rotation speed)
-    # This ignores the glitchy linear accelerations and pure orientation!
+    imu0: /imu/fixed
     imu0_config: [false, false, false,
                   false, false, false,
                   false, false, false,
-                  false, false, true,
+                  false, false, true,   # vyaw only to start
                   false, false, false]
     imu0_differential: false
+    imu0_relative: false
     imu0_remove_gravitational_acceleration: true
