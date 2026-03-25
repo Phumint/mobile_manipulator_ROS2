@@ -10,12 +10,12 @@ slam_toolbox:
     mode: mapping # 'mapping' for building the map, 'localization' for purely driving later
 
     # Match this to your Gazebo/ROS Bridge setting!
-    use_sim_time: true
+    use_sim_time: false
 
     # Mapping configuration
-    map_file_name: moma_map
-    map_start_pose: [0.0, 0.0, 0.0]
-    map_resolution: 0.05
+    # map_file_name: moma_map
+    # map_start_pose: [0.0, 0.0, 0.0]
+    resolution: 0.05
 
     # Solver Parameters
     solver_plugin: solver_plugins::CeresSolver
@@ -23,35 +23,46 @@ slam_toolbox:
     ceres_preconditioner: SCHUR_JACOBI
     ceres_trust_region_strategy: LEVENBERG_MARQUARDT
     ceres_dogleg_type: TRADITIONAL_DOGLEG
-    ceres_loss_function: HuberLoss
+    ceres_loss_function: None
 
     # ROS Parameters
     odom_tracker_plugin: "slam_toolbox::tracking_plugins::OdomTracker"
-    transform_publish_period: 0.02 # Publish the map->odom transform at 50Hz
+    transform_publish_period: 0.05 # Publish the map->odom transform at 50Hz
     
     # Tuning: How far the robot needs to move/rotate to trigger a laser scan match
-    minimum_travel_distance: 0.4
-    minimum_travel_heading: 0.4
+    minimum_travel_distance: 0.1  
+    minimum_travel_heading: 0.5
 
     # Lidar properties (Matching your S300 and merged scan)
-    max_laser_range: 25.0 # S300 max range is around 29, but keeping it slightly lower helps accuracy
-    minimum_time_interval: 0.5 
-    transform_timeout: 0.5
+    max_laser_range: 5.0 # S300 max range is around 29, but keeping it slightly lower helps accuracy
+    min_laser_range: 0.3
+    minimum_time_interval: 0.1
+    transform_timeout: 1.0
     tf_buffer_duration: 10.0
     stack_size_to_use: 40000000 
 
     # These parameters force the matcher to look at the "center of mass" of the scan,
     # helping it look past the thin chair legs to the solid walls behind them.
-    use_scan_matching: true
+    use_scan_matching: false
     use_scan_barycenter: true 
-    correlation_search_space_dimension: 0.5
+
+    # Correlation Parameters
+    correlation_search_space_dimension: 0.4
     correlation_search_space_resolution: 0.01
     correlation_search_space_smear_deviation: 0.1
-    distance_variance_penalty: 0.5 # Trust wheel odometry a bit more when LiDAR gets confused by chairs
+
+    distance_variance_penalty: 0.5
     angle_variance_penalty: 0.5
+    fine_search_angle_offset: 0.00349  # This is ~0.2 degrees (standard default)
     
     # Loop Closure (How it recognizes a room it has already been to)
     do_loop_closing: true
+
+    # Correlation Parameters - Loop Closure Parameters
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
     loop_match_minimum_chain_size: 10
     loop_match_maximum_variance_coarse: 3.0
     loop_match_minimum_response_coarse: 0.35
