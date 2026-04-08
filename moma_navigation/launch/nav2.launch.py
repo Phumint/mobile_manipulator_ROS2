@@ -63,7 +63,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         # Declare arguments so they can be overridden via CLI
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'),
+        DeclareLaunchArgument('use_sim_time', default_value='false', description='Use simulation (Gazebo) clock if true'),
         DeclareLaunchArgument('autostart', default_value='true', description='Automatically startup the nav2 stack'),
         DeclareLaunchArgument('params_file', default_value=PathJoinSubstitution([moma_nav_dir, 'config', 'moma_nav2.yaml']), description='Full path to the ROS2 parameters file to use'),
         # Require a map to be passed in

@@ -31,7 +31,7 @@ def generate_launch_description():
         condition=IfCondition(use_sim),
         parameters=[
             PathJoinSubstitution([FindPackageShare('mir_gazebo'), 'config', 'laser_merger_params.yaml']),
-            {'use_sim_time': use_sim_time}
+            {'use_sim_time': use_sim}
         ],
         remappings=[
         ('/merged', '/scan')
@@ -45,7 +45,7 @@ def generate_launch_description():
             PathJoinSubstitution([FindPackageShare('moma_navigation'), 'launch', 'localization.launch.py'])
         ),
         condition=IfCondition(use_sim),
-        launch_arguments={'use_sim_time': use_sim_time}.items()
+        launch_arguments={'use_sim_time': use_sim}.items()
     )
 
     # =========================================================
@@ -95,11 +95,11 @@ def generate_launch_description():
     
     # Delay hardware drivers
     delay_mir_driver = TimerAction(period=6.0, actions=[mir_driver_launch])
-    delay_ur_driver = TimerAction(period=10.0, actions=[ur_driver_launch])
+    delay_ur_driver = TimerAction(period=12.0, actions=[ur_driver_launch])
 
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use sim time if true'),
-        DeclareLaunchArgument('use_sim', default_value='true', description='Is this a simulation?'),
+        DeclareLaunchArgument('use_sim_time', default_value='false', description='Use sim time if true'),
+        DeclareLaunchArgument('use_sim', default_value='false', description='Is this a simulation?'),
         DeclareLaunchArgument('mir_ip', default_value='192.168.12.20', description='IP of the real MiR'),
         DeclareLaunchArgument('ur_robot_ip', default_value='192.168.12.120', description='IP of the real UR arm'),
         

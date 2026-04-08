@@ -11,7 +11,7 @@ def generate_launch_description():
     slam_toolbox_dir = FindPackageShare('slam_toolbox')
 
     # Arguments
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    use_sim_time = LaunchConfiguration('use_sim_time', default='false')
     slam_params_file = LaunchConfiguration('slam_params_file')
 
     # Include the official SLAM Toolbox launch file
@@ -26,7 +26,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation time'),
+        DeclareLaunchArgument('use_sim_time', default_value='false', description='Use simulation time'),
         DeclareLaunchArgument(
             'slam_params_file',
             default_value=PathJoinSubstitution([moma_nav_dir, 'config', 'slam_toolbox.yaml']),
