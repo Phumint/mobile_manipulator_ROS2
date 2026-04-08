@@ -52,14 +52,14 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 0.20000000298023224
+        Min Value: 0.20000000298023224
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz_default_plugins/LaserScan
-      Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color: 38; 162; 105
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
@@ -300,25 +300,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8.164287567138672
+      Distance: 6.418004035949707
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.2786361277103424
-        Y: 0.34243831038475037
-        Z: 0.6409405469894409
+        X: -0.2617048919200897
+        Y: -0.8659029603004456
+        Z: 1.0308486223220825
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9053980708122253
+      Pitch: 0.6353983283042908
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.1585702896118164
+      Yaw: 4.008570671081543
     Saved: ~
 Window Geometry:
   Displays:
