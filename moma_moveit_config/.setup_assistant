@@ -1,0 +1,25 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: moma_description
+    relative_path: urdf/moma.urdf.xacro
+  srdf:
+    relative_path: config/moma_robot.srdf
+  package_settings:
+    author_name: phumint
+    author_email: phumint1969@gmail.com
+    generated_timestamp: 1776776796
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
