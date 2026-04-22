@@ -96,7 +96,7 @@
     <gazebo>
       <plugin filename="ign_ros2_control-system"
               name="ign_ros2_control::IgnitionROS2ControlPlugin">
-        <parameters>$(find ur_simulation_gz)/config/ur_controllers.yaml</parameters>
+        <parameters>$(find moma_moveit_config)/config/ros2_controllers.yaml</parameters>
       </plugin>
     </gazebo>
   </xacro:if>
