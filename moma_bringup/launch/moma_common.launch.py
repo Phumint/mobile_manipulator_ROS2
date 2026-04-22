@@ -9,7 +9,6 @@ from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
     # Arguments
-    use_sim_time = LaunchConfiguration('use_sim_time')
     use_sim = LaunchConfiguration('use_sim')
 
     # Real Hardware IP Arguments
