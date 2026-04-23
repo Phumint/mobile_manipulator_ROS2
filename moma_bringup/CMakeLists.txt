@@ -12,6 +12,7 @@ find_package(ament_cmake REQUIRED)
 install(
   PROGRAMS
     scripts/joint_state_merger.py
+    src/moma_demo_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
