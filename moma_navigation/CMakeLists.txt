@@ -13,7 +13,7 @@ find_package(nav2_common REQUIRED)
 find_package(slam_toolbox REQUIRED)
 
 install(
-  DIRECTORY config include launch src maps rviz web
+  DIRECTORY config launch src maps rviz web
   DESTINATION share/${PROJECT_NAME}
 )
 
