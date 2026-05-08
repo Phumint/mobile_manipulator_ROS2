@@ -2,6 +2,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -36,13 +37,15 @@ def generate_launch_description():
         parameters=[moveit_params]
     )
 
-    # 4. Controller Spawner (ur_manipulator_controller)
-    # We delay this slightly to ensure the controller_manager is ready
+    # 4. Controller Spawner (sim only)
+    # On real hardware the UR driver activates scaled_joint_trajectory_controller itself.
+    # MoveIt finds whichever controller has a live action server (see moveit_controllers.yaml).
     controller_spawner = Node(
         package="controller_manager",
         executable="spawner",
         arguments=["ur_manipulator_controller", "--controller-manager", "/controller_manager"],
-        parameters=[{'use_sim_time': use_sim}]
+        parameters=[{'use_sim_time': use_sim}],
+        condition=IfCondition(use_sim)
     )
 
     # 5. Combined RViz Node

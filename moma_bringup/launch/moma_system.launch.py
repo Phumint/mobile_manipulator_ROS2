@@ -38,13 +38,14 @@ def generate_launch_description():
         }.items()
     )
 
-    # 4. Controller Spawner
+    # 4. Controller Spawner (sim only — real hardware UR driver activates JSB itself)
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=['joint_state_broadcaster',
                    '--controller-manager', '/controller_manager'],
-        parameters= [{'use_sim_time': use_sim}]
+        parameters=[{'use_sim_time': use_sim}],
+        condition=IfCondition(use_sim)
     )
 
     # =========================================================
