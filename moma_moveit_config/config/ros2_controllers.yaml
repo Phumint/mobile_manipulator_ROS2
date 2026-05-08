@@ -1,11 +1,9 @@
-# This config file is used by ros2_control
 controller_manager:
   ros__parameters:
-    update_rate: 100  # Hz
+    update_rate: 100
 
     ur_manipulator_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
-
+      type: joint_trajectory_controller/JointTrajectoryController   # was ScaledJointTrajectoryController
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster

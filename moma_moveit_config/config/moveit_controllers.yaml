@@ -3,8 +3,23 @@ moveit_controller_manager: moveit_simple_controller_manager/MoveItSimpleControll
 moveit_simple_controller_manager:
   controller_names:
     - ur_manipulator_controller
+    - scaled_joint_trajectory_controller
 
+  # Used in Gazebo simulation (JointTrajectoryController via ros2_controllers.yaml)
   ur_manipulator_controller:
+    type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    default: true
+    joints:
+      - ur_shoulder_pan_joint
+      - ur_shoulder_lift_joint
+      - ur_elbow_joint
+      - ur_wrist_1_joint
+      - ur_wrist_2_joint
+      - ur_wrist_3_joint
+
+  # Used on real UR hardware (activated by ur_robot_driver)
+  scaled_joint_trajectory_controller:
     type: FollowJointTrajectory
     action_ns: follow_joint_trajectory
     default: true
