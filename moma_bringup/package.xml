@@ -9,6 +9,25 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>moveit_msgs</exec_depend>
+  <exec_depend>shape_msgs</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>dual_laser_merger</exec_depend>
+  <exec_depend>mir_driver_bridge</exec_depend>
+  <exec_depend>mir_gazebo</exec_depend>
+  <exec_depend>ur_robot_driver</exec_depend>
+  <exec_depend>moma_description</exec_depend>
+  <exec_depend>moma_gazebo</exec_depend>
+  <exec_depend>moma_navigation</exec_depend>
+  <exec_depend>moma_moveit_config</exec_depend>
+  <exec_depend>moveit_ros_move_group</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
