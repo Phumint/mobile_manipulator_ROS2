@@ -28,44 +28,7 @@
   <!-- ========================================== -->
   <!-- 1. INCLUDE MIR BASE                        -->
   <!-- ========================================== -->
-  <!-- Include the MiR macro directly instead of mir.urdf.xacro.
-       mir.urdf.xacro declares <xacro:arg name="tf_prefix"> which would pick up
-       the UR driver's tf_prefix:=ur_ arg (shared xacro global namespace), renaming
-       every MiR link to ur_/base_link etc. and breaking the kinematic tree. -->
-  <xacro:include filename="$(find mir_description)/urdf/include/mir_v1.urdf.xacro" />
-  <xacro:mir prefix="" />
-
-  <!-- MiR Gazebo Ignition plugins (replaces the block in mir.urdf.xacro) -->
-  <xacro:if value="$(arg sim_ignition)">
-    <gazebo>
-      <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
-        <left_joint>left_wheel_joint</left_joint>
-        <right_joint>right_wheel_joint</right_joint>
-        <wheel_separation>0.445208</wheel_separation>
-        <wheel_radius>0.0625</wheel_radius>
-        <odom_publish_frequency>50</odom_publish_frequency>
-        <topic>cmd_vel</topic>
-        <odom_topic>odom</odom_topic>
-        <tf_topic>/tf</tf_topic>
-        <frame_id>odom</frame_id>
-        <publish_odom_tf>false</publish_odom_tf>
-        <child_frame_id>base_footprint</child_frame_id>
-      </plugin>
-      <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
-        <topic>joint_states</topic>
-        <joint_name>left_wheel_joint</joint_name>
-        <joint_name>right_wheel_joint</joint_name>
-        <joint_name>fl_caster_rotation_joint</joint_name>
-        <joint_name>fl_caster_wheel_joint</joint_name>
-        <joint_name>fr_caster_rotation_joint</joint_name>
-        <joint_name>fr_caster_wheel_joint</joint_name>
-        <joint_name>bl_caster_rotation_joint</joint_name>
-        <joint_name>bl_caster_wheel_joint</joint_name>
-        <joint_name>br_caster_rotation_joint</joint_name>
-        <joint_name>br_caster_wheel_joint</joint_name>
-      </plugin>
-    </gazebo>
-  </xacro:if>
+  <xacro:include filename="$(find mir_description)/urdf/mir.urdf.xacro" />
 
   <!-- ========================================== -->
   <!-- 2. THE MOUNTING BOX                        -->

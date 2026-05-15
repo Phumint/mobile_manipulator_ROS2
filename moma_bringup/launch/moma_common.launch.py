@@ -75,6 +75,8 @@ def generate_launch_description():
             'ur_type': 'ur10e',
             'tf_prefix': 'ur_',
             'use_fake_hardware': 'false',
+            # Use the same controller name as simulation so MoveIt config is identical
+            'initial_joint_controller': 'ur_manipulator_controller',
             # Pass your unified URDF to the UR driver so it knows about the MiR base
             'description_package': 'moma_description',
             'description_file': 'moma.urdf.xacro',

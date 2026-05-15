@@ -1,8 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
@@ -37,18 +36,7 @@ def generate_launch_description():
         parameters=[moveit_params]
     )
 
-    # 4. Controller Spawner (sim only)
-    # On real hardware the UR driver activates scaled_joint_trajectory_controller itself.
-    # MoveIt finds whichever controller has a live action server (see moveit_controllers.yaml).
-    controller_spawner = Node(
-        package="controller_manager",
-        executable="spawner",
-        arguments=["ur_manipulator_controller", "--controller-manager", "/controller_manager"],
-        parameters=[{'use_sim_time': use_sim}],
-        condition=IfCondition(use_sim)
-    )
-
-    # 5. Combined RViz Node
+    # 4. Combined RViz Node
     # Uses your custom moveit.rviz config but allows Nav2 plugins to be added
     rviz_config_file = os.path.join(
         get_package_share_directory("moma_bringup"),
@@ -65,17 +53,9 @@ def generate_launch_description():
         parameters=[moveit_params],
     )
 
-    # 6. Return Launch Description with staggered start
     return LaunchDescription([
         DeclareLaunchArgument('use_sim', default_value='true', description='Use simulation time if true'),
-       
-        # Start Navigation and MoveGroup immediately
         nav2_launch,
         move_group_node,
-       
-        # Start RViz
         rviz_node,
-        
-        # Delay the controller spawner to ensure hardware/sim is ready
-        TimerAction(period=2.0, actions=[controller_spawner])
     ])
