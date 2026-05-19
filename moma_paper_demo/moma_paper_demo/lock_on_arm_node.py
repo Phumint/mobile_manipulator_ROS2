@@ -159,6 +159,18 @@ class LockOnArmNode(Node):
         self._q_a = np.zeros(6)
         self._q_a_ready = False
 
+        # Internal "desired position" integrator.  We accumulate q_dot * dt into
+        # this state and send it to the JTC each cycle, rather than recomputing
+        # q_next from the actual joint state.  This stops the controller's
+        # trajectory replacement from "swallowing" commanded velocity — the
+        # target progresses monotonically and the JTC tracks it at full speed.
+        # Reset to q_a on (re-)enable so we don't carry stale state between runs.
+        self._q_desired = None
+        # Cap on how far the desired position is allowed to lead the actual.
+        # If the arm physically can't keep up (e.g. blocked, singularity), the
+        # desired is pulled back toward actual instead of running away.
+        self._max_desired_lead = 0.5   # rad (Euclidean norm in joint space)
+
         self._tf_buffer = tf2_ros.Buffer()
         self._tf_listener = tf2_ros.TransformListener(self._tf_buffer, self)
 
@@ -209,6 +221,9 @@ class LockOnArmNode(Node):
                             reason='TF not available for auto target capture',
                         )
                 self._enabled = p.value
+                # Force re-anchor on the next control cycle so we start the
+                # internal integrator at the live joint state, not stale data.
+                self._q_desired = None
                 if not p.value:
                     self._publish_stop()
                 self.get_logger().info(
@@ -223,6 +238,7 @@ class LockOnArmNode(Node):
                             'Re-enable after arm reaches home.'
                         )
                         self._enabled = False
+                    self._q_desired = None
                     self._send_home()
 
             elif p.name == 'k_p':
@@ -340,6 +356,8 @@ class LockOnArmNode(Node):
                 f'rot={np.degrees(rot_norm):.2f} deg). Holding.',
                 throttle_duration_sec=2.0,
             )
+            # Re-anchor desired to actual so we don't drift while idle.
+            self._q_desired = self._q_a.copy()
             self._publish_stop()
             return
 
@@ -374,11 +392,28 @@ class LockOnArmNode(Node):
             q_dot = q_dot + null_proj @ q_dot_posture
 
         q_dot = self._clamp_velocity(q_dot)
+
+        # --- Internal desired-position integrator ---
+        dt = 1.0 / self._rate
+        if self._q_desired is None:
+            self._q_desired = self._q_a.copy()
+        self._q_desired = self._q_desired + q_dot * dt
+
+        # Cap how far desired is allowed to lead actual.  Stops runaway if the
+        # arm physically can't keep up.
+        lead = self._q_desired - self._q_a
+        lead_norm = float(np.linalg.norm(lead))
+        if lead_norm > self._max_desired_lead:
+            self._q_desired = self._q_a + lead * (self._max_desired_lead / lead_norm)
+
         self._publish_arm_cmd(q_dot)
 
+        q_dot_max = float(np.max(np.abs(q_dot)))
+        sat_pct = 100.0 * q_dot_max / self._max_joint_vel if self._max_joint_vel > 0 else 0.0
         self.get_logger().info(
             f'err: pos={pos_norm*1000:.1f} mm, rot={np.degrees(rot_norm):.2f} deg  '
-            f'|q̇|_max={np.max(np.abs(q_dot)):.3f} rad/s  '
+            f'|q̇|_max={q_dot_max:.3f} rad/s ({sat_pct:.0f}% of limit)  '
+            f'lead={lead_norm:.3f} rad  '
             f'posture_err={np.linalg.norm(self._q_ref - self._q_a):.2f} rad',
             throttle_duration_sec=1.0,
         )
@@ -388,21 +423,26 @@ class LockOnArmNode(Node):
     # ------------------------------------------------------------------
 
     def _publish_arm_cmd(self, q_dot: np.ndarray) -> None:
-        """Integrate velocity one step and send as a 1-point JointTrajectory."""
+        """Send the integrated desired position to the JTC as a 1-point trajectory.
+
+        Target is self._q_desired (monotonically advanced by the control loop),
+        not q_a + q_dot*dt.  This prevents the JTC's trajectory-replacement
+        logic from "swallowing" commanded velocity by repeatedly resetting from
+        the actual (lagging) joint state.
+        """
         dt = 1.0 / self._rate
-        q_next = self._q_a + q_dot * dt
 
         msg = JointTrajectory()
-        # Zero stamp → controller uses reception time as reference, avoids
-        # sim-time deadline races.
         msg.header.stamp.sec = 0
         msg.header.stamp.nanosec = 0
         msg.joint_names = _UR10E_JOINT_NAMES
 
         pt = JointTrajectoryPoint()
-        pt.positions = q_next.tolist()
+        pt.positions = self._q_desired.tolist()
         pt.velocities = q_dot.tolist()
-        pt.time_from_start = Duration(sec=0, nanosec=int(dt * 1e9))
+        # 2× dt gives the controller a stable horizon to interpolate over while
+        # we publish the next update one cycle later.
+        pt.time_from_start = Duration(sec=0, nanosec=int(2 * dt * 1e9))
 
         msg.points = [pt]
         self._traj_pub.publish(msg)
