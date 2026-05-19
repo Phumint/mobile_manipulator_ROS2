@@ -1,0 +1,3 @@
+planning_plugin: pilz_industrial_motion_planner/CommandPlanner
+request_adapters: ""
+default_planner_config: PTP
