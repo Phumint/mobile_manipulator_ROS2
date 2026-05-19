@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>moma_paper_demo</name>
+  <version>0.1.0</version>
+  <description>Holistic reactive whole-body control demo — Haviland et al. 2022</description>
+  <maintainer email="phumint1969@gmail.com">phumint</maintainer>
+  <license>MIT</license>
+
+  <!-- ROS 2 runtime dependencies (rosdep-installable) -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>control_msgs</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+
+  <!--
+    The following Python packages are NOT in rosdep and must be installed
+    manually. See README.md for instructions:
+      - roboticstoolbox-python   (UR10 model, Jacobian, manipulability)
+      - qpsolvers                (QP solver interface)
+      - osqp                     (QP backend)
+  -->
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

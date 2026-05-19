@@ -29,3 +29,6 @@ colcon_ignore
 # TF2 Tools View Frames output
 *.gv
 *.pdf
+
+# Local Claude Code context files (not for version control)
+moma_paper_demo/ALGORITHM_NOTES.md
