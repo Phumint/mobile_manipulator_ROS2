@@ -256,6 +256,56 @@ class LockOnArmNode(Node):
             elif p.name == 'rot_hold_tol':
                 self._rot_hold_tol = p.value
 
+            elif p.name in ('track_x', 'track_y', 'track_z',
+                            'track_roll', 'track_pitch', 'track_yaw'):
+                # Read the live state, applying this in-flight change.
+                flags_pos = {
+                    'track_x': self.get_parameter('track_x').value,
+                    'track_y': self.get_parameter('track_y').value,
+                    'track_z': self.get_parameter('track_z').value,
+                }
+                flags_rot = {
+                    'track_roll': self.get_parameter('track_roll').value,
+                    'track_pitch': self.get_parameter('track_pitch').value,
+                    'track_yaw': self.get_parameter('track_yaw').value,
+                }
+                flags_pos[p.name] = p.value if p.name in flags_pos else flags_pos.get(p.name)
+                flags_rot[p.name] = p.value if p.name in flags_rot else flags_rot.get(p.name)
+
+                new_pos_axes = [i for i, k in enumerate(['track_x', 'track_y', 'track_z'])
+                                if flags_pos[k]]
+                new_rot_axes = [i for i, k in enumerate(['track_roll', 'track_pitch', 'track_yaw'])
+                                if flags_rot[k]]
+
+                if not new_pos_axes and not new_rot_axes:
+                    self.get_logger().warning(
+                        f'Refusing {p.name}={p.value}: would leave zero tracked axes.'
+                    )
+                    return SetParametersResult(
+                        successful=False,
+                        reason='At least one position or orientation axis must be tracked.',
+                    )
+
+                self._tracked_axes = new_pos_axes
+                self._tracked_rot_axes = new_rot_axes
+
+                # Re-snapshot the current EE pose so toggling a previously-free
+                # axis (e.g. X after the MiR has driven forward) doesn't create
+                # a huge instantaneous error that would jerk the arm.
+                if self._enabled and self._auto_capture:
+                    self._snapshot_current_ee_as_target()
+
+                # Force the desired-position integrator to re-anchor next cycle.
+                self._q_desired = None
+
+                pos_labels = ['X', 'Y', 'Z']
+                rot_labels = ['Rx', 'Ry', 'Rz']
+                tracked_pos = [pos_labels[i] for i in self._tracked_axes]
+                tracked_rot = [rot_labels[i] for i in self._tracked_rot_axes]
+                self.get_logger().info(
+                    f'Tracking updated: pos={tracked_pos}, rot={tracked_rot}.'
+                )
+
         return SetParametersResult(successful=True)
 
     def _snapshot_current_ee_as_target(self) -> bool:
