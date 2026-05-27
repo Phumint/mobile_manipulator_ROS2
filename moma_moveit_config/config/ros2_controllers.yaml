@@ -26,3 +26,6 @@ ur_manipulator_controller:
     state_interfaces:
       - position
       - velocity
+    # Diagnostic: publish controller_state at the full controller_manager
+    # rate so we can resolve every control cycle (default is 50 Hz).
+    state_publish_rate: 100.0
