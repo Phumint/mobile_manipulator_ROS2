@@ -1,0 +1,51 @@
+controller_node:
+  ros__parameters:
+
+    # --- Goal: desired end-effector pose in the map frame ---
+    goal_pose:
+      x: -2.5
+      y: -0.4
+      z: 1.0
+      qx: 0.0
+      qy: 0.0
+      qz: 0.0
+      qw: 1.0
+
+    # --- Position-Based Servoing (PBS) gain (Eq. 17) ---
+    # beta scales the desired EE velocity; paper uses 1.5
+    beta: 1.5
+
+    # --- Base orientation cost (Eq. 13) ---
+    # k_eps drives the base to face the EE; paper range 0.1–0.5 recommended
+    k_eps: 0.5
+
+    # --- QP cost matrix weights (Eq. 10, 14) ---
+    y_gain: 0.01        # Y: baseline joint velocity cost
+    k_a: 0.01           # constant arm joint cost (base cost = 1/et dynamically)
+
+    # --- Joint limit velocity damper (Eq. 15–16) ---
+    ps: 0.1             # safety angle [rad] — minimum clearance to joint limit
+    pi_influence: 0.9   # influence angle [rad] — damper activation range
+    eta: 1.0            # damper gain
+
+    # --- Goal tolerance ---
+    pos_tol: 0.02       # [m] Euclidean distance to declare EE goal reached
+    ori_tol: 0.05       # [rad] orientation tolerance (used for logging, not stop condition)
+
+    # --- Velocity limits ---
+    max_base_linear_vel: 0.3    # [m/s]  → qdlim for forward virtual joint
+    max_base_angular_vel: 0.5   # [rad/s] → qdlim for rotation virtual joint
+
+    # --- Control loop ---
+    control_rate: 20.0          # [Hz] — paper runs at ~200 Hz on i5 NUC
+
+    # --- Activation gate ---
+    # Set to true to enable whole-body control output.
+    # Leave false (default) when Nav2 is navigating so it owns /cmd_vel exclusively.
+    enabled: false
+
+    # --- TF frame IDs ---
+    map_frame: map
+    base_frame: base_footprint
+    ee_frame: ur_tool0
+    arm_base_frame: ur_base_link

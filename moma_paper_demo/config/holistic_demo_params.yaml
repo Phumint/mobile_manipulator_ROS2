@@ -1,0 +1,139 @@
+###############################################################################
+# holistic_demo_params.yaml
+#
+# Parameters for the two-node holistic demo:
+#   - sine_wave_base_node : drives the MiR in a sine wave trajectory
+#   - lock_on_arm_node    : keeps the UR10e EE at a fixed world-frame point
+#
+# Both nodes start with enabled: false so they don't conflict with Nav2.
+# Enable each one when you are ready:
+#   ros2 param set /lock_on_arm_node    enabled true
+#   ros2 param set /sine_wave_base_node enabled true
+###############################################################################
+
+sine_wave_base_node:
+  ros__parameters:
+
+    # Forward speed [m/s] — constant linear.x command.
+    linear_vel: 0.1
+
+    # Lateral amplitude of the sine wave path [m].
+    # Keep amplitude * (2π/wavelength) < 0.5 rad to stay in the small-angle regime
+    # where the feedforward approximation is most accurate.
+    amplitude: 0.2
+
+    # Spatial wavelength [m] — one full oscillation over this forward distance.
+    wavelength: 3.0
+
+    # Control loop rate [Hz].
+    control_rate: 20.0
+
+    # Set to true to start driving (or use `ros2 param set`).
+    enabled: false
+
+
+lock_on_arm_node:
+  ros__parameters:
+
+    # Desired EE position in the map/world frame [m].
+    # Set this to a point the arm can reach throughout the full sine wave sweep.
+    # With the MiR starting near the origin and the arm ~0.6 m above the base,
+    # (0.5, 0.0, 1.2) puts the target directly in front and at a comfortable height.
+    # Initial target — overridden when auto_capture_target is true (default).
+    target:
+      x: 0.904
+      y: 0.395
+      z: 1.188
+
+    # If true, snapshot the live EE pose the moment `enabled` flips to true.
+    # Means you can launch the demo, position the arm however you like,
+    # then enable — and it locks onto exactly that position.
+    auto_capture_target: true
+
+    # Which world-frame POSITION axes to control.
+    # X = forward (robot's direction of travel) — leave free so arm doesn't fight motion.
+    # Y = lateral — TRACK this to cancel the sine-wave oscillation.
+    # Z = height  — TRACK this to hold the EE at a fixed height.
+    track_x: true
+    track_y: true
+    track_z: true
+
+    # Which world-frame ORIENTATION axes to control (in map frame).
+    # Tracking all three keeps the EE pointing the same way as the MiR yaws
+    # along the sine wave — otherwise the EE would tilt with the base.
+    track_roll: true
+    track_pitch: true
+    track_yaw: true
+
+    # Proportional gain for position error [1/s] — maps m → m/s.
+    # Higher = more aggressive correction.  Was 2.0; bumped for snappier tracking.
+    k_p: 5.0
+
+    # Proportional gain for orientation error [1/s] — maps rad → rad/s.
+    k_p_rot: 5.0
+
+    # Null-space posture gain [1/s] — pulls joints toward the reference posture
+    # captured at enable time, without disturbing the primary EE task.
+    # Set to 0.0 to disable.  0.3–1.0 is a good range.
+    k_ns: 0.5
+
+    # Damped-least-squares regularization factor.
+    # Lower = sharper response, less smoothing near singularities.  Was 0.05.
+    damping: 0.01
+
+    # Per-joint velocity limit [rad/s] — output is scaled if any joint exceeds this.
+    # UR10e hardware limits are 2.094 rad/s (shoulder/lift) and 3.14 rad/s (elbow/wrists);
+    # 2.0 stays safely inside the slowest joint's limit.  Was 1.0.
+    max_joint_vel: 2.0
+
+    # Hold tolerances — once both errors are below these, the node holds position.
+    # Lower → tighter tracking but more steady-state activity.
+    pos_hold_tol: 0.001   # 1 mm was 2
+    rot_hold_tol: 0.01    # ~0.57 deg, was ~1.1 deg
+
+    # Control loop rate [Hz].  Higher rate = tighter feedback + smaller per-step
+    # commands → smoother, faster tracking.  Was 20.0.
+    control_rate: 50.0
+
+    # Output low-pass filter on q_dot.  alpha ∈ (0, 1]:
+    #   1.0  = no filtering (raw controller output)
+    #   0.3  = ~60 ms time constant @ 50 Hz — smooths AMCL jumps and arm/base
+    #          reaction coupling without meaningful tracking lag
+    #   0.1  = heavy smoothing, noticeable tracking lag
+    # Lower this if the arm visibly rocks back and forth from AMCL pose
+    # corrections; set to 1.0 to disable filtering.
+    velocity_filter_alpha: 0.3
+
+    # Set to true to start arm tracking (or use `ros2 param set`).
+    enabled: false
+
+    # ── Safety: MoveIt collision checking ──────────────────────────────────
+    # Calls /check_state_validity on move_group to test whether the next
+    # commanded joint configuration is in collision (arm vs self, arm vs
+    # mounting box, arm vs anything in the planning scene).  On collision,
+    # the arm freezes until the next check clears.  Requires moma_nav_moveit
+    # to be running.
+    use_collision_check: true
+    collision_check_rate: 10.0          # Hz, runs on its own timer
+    planning_group: ur_manipulator
+    validity_service: /check_state_validity
+    # Predictive horizon — the check examines q_desired + q_dot * this (seconds).
+    # Should be ≥ service round-trip latency (~80–150 ms) so the arm slows
+    # BEFORE entering the collision zone, not after.
+    collision_lookahead: 0.2
+    # Hysteresis: consecutive 'valid' responses required to resume after a
+    # freeze.  Stops boundary flicker.  3 clears at 10 Hz = 300 ms minimum
+    # frozen time once collision is detected.
+    collision_clear_count: 3
+
+    # ── Safety: reach limit ───────────────────────────────────────────────
+    # Freeze if the captured EE target drifts further than this from the arm
+    # base.  UR10e physical reach is 1.30 m; leave headroom for orientation
+    # tracking and for the arm not to operate right at its workspace edge.
+    use_reach_limit: true
+    max_reach_distance: 1.10            # m
+
+    # TF frame IDs — must match moma_description and moma_moveit_config.
+    map_frame: map
+    arm_base_frame: ur_base_link
+    ee_frame: ur_tool0

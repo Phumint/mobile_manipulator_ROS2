@@ -1,0 +1,12 @@
+# Python packages not available via rosdep.
+# Install before building the workspace:
+#   pip install -r src/moma_paper_demo/requirements.txt
+
+roboticstoolbox-python>=1.1.0
+spatialmath-python>=1.0.0
+qpsolvers[osqp]>=4.0.0
+osqp>=0.6.0
+# scipy>=1.11 removed scipy.randn which roboticstoolbox-python requires
+scipy<1.11
+# numpy 2.x breaks system-installed matplotlib on Ubuntu 22.04
+numpy<2.0

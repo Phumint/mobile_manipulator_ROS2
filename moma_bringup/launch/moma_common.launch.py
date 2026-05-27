@@ -37,15 +37,10 @@ def generate_launch_description():
         ]   
     )
 
-    # Start the EKF Localization Node
-    # CONDITION: Only run this in simulation. The real MiR provides pre-fused /odom.
-    ekf_localization_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([FindPackageShare('moma_navigation'), 'launch', 'localization.launch.py'])
-        ),
-        condition=IfCondition(use_sim),
-        launch_arguments={'use_sim_time': use_sim}.items()
-    )
+    # EKF intentionally removed for sim parity with real hardware. In sim, the
+    # OdometryPublisher gazebo plugin publishes ground-truth-physics /odom on
+    # behalf of the gazebo "base" (analogous to MiR's onboard pre-fused odom),
+    # and odom_tf_publisher emits the matching odom -> base_footprint TF.
 
     # =========================================================
     # REAL HARDWARE DRIVERS (Conditioned on UnlessCondition)
@@ -75,6 +70,8 @@ def generate_launch_description():
             'ur_type': 'ur10e',
             'tf_prefix': 'ur_',
             'use_fake_hardware': 'false',
+            # Use the same controller name as simulation so MoveIt config is identical
+            'initial_joint_controller': 'ur_manipulator_controller',
             # Pass your unified URDF to the UR driver so it knows about the MiR base
             'description_package': 'moma_description',
             'description_file': 'moma.urdf.xacro',
@@ -84,14 +81,37 @@ def generate_launch_description():
         }.items()
     )
 
+    # Controller Spawners (sim only — real hardware UR driver activates these itself)
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_state_broadcaster',
+                   '--controller-manager', '/controller_manager'],
+        condition=IfCondition(use_sim)
+    )
+
+    arm_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['ur_manipulator_controller',
+                   '--controller-manager', '/controller_manager'],
+        condition=IfCondition(use_sim)
+    )
+
     # =========================================================
     # DELAY ACTIONS (Using TimerAction to stagger startup)
     # =========================================================
-    
+
     # Delay sim nodes
     delay_laser_merger = TimerAction(period=2.0, actions=[laser_merger_node])
-    delay_ekf = TimerAction(period=5.0, actions=[ekf_localization_launch])
-    
+
+    # Controllers need /controller_manager up (hosted inside Gazebo via ign_ros2_control).
+    # moma_common itself is already delayed 5 s from moma_system, so 3 s here = 8 s total.
+    delay_controllers = TimerAction(
+        period=3.0,
+        actions=[joint_state_broadcaster_spawner, arm_controller_spawner]
+    )
+
     # Delay hardware drivers
     delay_mir_driver = TimerAction(period=6.0, actions=[mir_driver_launch])
     delay_ur_driver = TimerAction(period=12.0, actions=[ur_driver_launch])
@@ -101,9 +121,9 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim', default_value='false', description='Is this a simulation?'),
         DeclareLaunchArgument('mir_ip', default_value='192.168.12.20', description='IP of the real MiR'),
         DeclareLaunchArgument('ur_robot_ip', default_value='192.168.12.120', description='IP of the real UR arm'),
-        
+
         delay_laser_merger,
-        delay_ekf,
+        delay_controllers,
         delay_mir_driver,
         delay_ur_driver
     ])

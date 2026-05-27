@@ -20,9 +20,13 @@
   gz_type_name: "gz.msgs.Twist"
   direction: ROS_TO_GZ
 
-# Odometry data (Gazebo -> ROS)
+# Odometry: published by the OdometryPublisher gazebo plugin (in moma.urdf.xacro)
+# on the gz topic "odom_gt" — physics-derived ground truth. Bridged into ROS as
+# /odom so it matches the real-hardware topic name (MiR driver publishes /odom).
+# The diff_drive plugin's wheel-encoder gz topic /odom is intentionally NOT
+# bridged: it reports commanded velocity, which lies under wall contact.
 - ros_topic_name: "/odom"
-  gz_topic_name: "/odom"
+  gz_topic_name: "/odom_gt"
   ros_type_name: "nav_msgs/msg/Odometry"
   gz_type_name: "gz.msgs.Odometry"
   direction: GZ_TO_ROS

@@ -101,5 +101,12 @@
         <falloff>0</falloff>
       </spot>
     </light>
+    
+    <gui fullscreen='false'>
+      <camera name="user_camera">
+        <pose>5 5 5 0 0.5 0.785</pose>
+        <view_angle>1.0472</view_angle>
+      </camera>
+    </gui>
   </world>
 </sdf>

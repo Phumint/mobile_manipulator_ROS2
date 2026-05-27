@@ -1,0 +1,37 @@
+planning_plugin: ompl_interface/OMPLPlanner
+
+request_adapters: >-
+  default_planner_request_adapters/AddTimeOptimalParameterization
+  default_planner_request_adapters/ResolveConstraintFrames
+  default_planner_request_adapters/FixWorkspaceBounds
+  default_planner_request_adapters/FixStartStateBounds
+  default_planner_request_adapters/FixStartStateCollision
+  default_planner_request_adapters/FixStartStatePathConstraints
+
+# How far outside declared joint limits a start state may be before it is
+# rejected.  Simulation joint_state_broadcaster can land slightly outside
+# limits on startup; 0.5 rad tolerance prevents unnecessary failures.
+start_state_max_bounds_error: 0.5
+
+ur_manipulator:
+  default_planner_config: RRTConnect
+  planner_configs:
+    - RRTConnect
+    - RRT
+  projection_evaluator: joints(ur_shoulder_pan_joint, ur_shoulder_lift_joint)
+  longest_valid_segment_fraction: 0.005
+  # Retry this many times with fresh random seeds before declaring failure.
+  # Default of 1 means a single bad sample = catastrophic failure.
+  num_planning_attempts: 5
+  # Simplify the raw RRT path after sampling to remove unnecessary waypoints.
+  simplify_solutions: true
+
+planner_configs:
+  RRTConnect:
+    type: geometric::RRTConnect
+    range: 0.0
+
+  RRT:
+    type: geometric::RRT
+    range: 0.0
+    goal_bias: 0.05
