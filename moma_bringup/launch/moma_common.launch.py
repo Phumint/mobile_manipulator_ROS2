@@ -16,25 +16,25 @@ def generate_launch_description():
     ur_robot_ip = LaunchConfiguration('ur_robot_ip')
 
     # =========================================================
-    # SIMULATION ONLY NODES (Conditioned on IfCondition)
+    # SHARED NODES (sim + real)
     # =========================================================
 
-    # Start the Dual Laser Merger (Leveraging mir_ws!)
-    # CONDITION: Only run this if we are in simulation. 
-    # The real MiR hardware provides a unified /scan natively.
+    # Dual Laser Merger — runs in BOTH sim and real.
+    # The MiR's native unified /scan is multiplexed in a way that degrades
+    # SLAM/AMCL performance, so on real hardware the mir_bridge exposes the
+    # raw /b_scan and /f_scan (matching sim) and we merge them here.
     laser_merger_node = Node(
         package='dual_laser_merger',
         executable='dual_laser_merger_node',
         name='dual_laser_merger_node',
         output='screen',
-        condition=IfCondition(use_sim),
         parameters=[
             PathJoinSubstitution([FindPackageShare('mir_gazebo'), 'config', 'laser_merger_params.yaml']),
             {'use_sim_time': use_sim}
         ],
         remappings=[
         ('/merged', '/scan')
-        ]   
+        ]
     )
 
     # EKF intentionally removed for sim parity with real hardware. In sim, the
