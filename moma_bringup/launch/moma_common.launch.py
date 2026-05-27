@@ -37,15 +37,10 @@ def generate_launch_description():
         ]   
     )
 
-    # Start the EKF Localization Node
-    # CONDITION: Only run this in simulation. The real MiR provides pre-fused /odom.
-    ekf_localization_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([FindPackageShare('moma_navigation'), 'launch', 'localization.launch.py'])
-        ),
-        condition=IfCondition(use_sim),
-        launch_arguments={'use_sim_time': use_sim}.items()
-    )
+    # EKF intentionally removed for sim parity with real hardware. In sim, the
+    # OdometryPublisher gazebo plugin publishes ground-truth-physics /odom on
+    # behalf of the gazebo "base" (analogous to MiR's onboard pre-fused odom),
+    # and odom_tf_publisher emits the matching odom -> base_footprint TF.
 
     # =========================================================
     # REAL HARDWARE DRIVERS (Conditioned on UnlessCondition)
@@ -109,7 +104,6 @@ def generate_launch_description():
 
     # Delay sim nodes
     delay_laser_merger = TimerAction(period=2.0, actions=[laser_merger_node])
-    delay_ekf = TimerAction(period=5.0, actions=[ekf_localization_launch])
 
     # Controllers need /controller_manager up (hosted inside Gazebo via ign_ros2_control).
     # moma_common itself is already delayed 5 s from moma_system, so 3 s here = 8 s total.
@@ -129,7 +123,6 @@ def generate_launch_description():
         DeclareLaunchArgument('ur_robot_ip', default_value='192.168.12.120', description='IP of the real UR arm'),
 
         delay_laser_merger,
-        delay_ekf,
         delay_controllers,
         delay_mir_driver,
         delay_ur_driver

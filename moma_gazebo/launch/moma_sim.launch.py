@@ -58,12 +58,14 @@ def generate_launch_description():
         output='screen'
     )
 
-    start_covariance_fixer = Node(
+    # Republishes /odom as the odom -> base_footprint TF. Mirrors what the
+    # MiR driver does on real hardware (publishes both the topic and the TF).
+    start_odom_tf_publisher = Node(
         package='moma_gazebo',
-        executable='covariance_fixer_node.py',
-        name='covariance_fixer_node',
+        executable='odom_tf_publisher.py',
+        name='odom_tf_publisher',
         output='screen',
-        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]
+        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
     )
 
     return LaunchDescription([
@@ -72,5 +74,5 @@ def generate_launch_description():
         gz_sim,
         gz_spawn_entity,
         gz_bridge,
-        start_covariance_fixer,
+        start_odom_tf_publisher,
     ])

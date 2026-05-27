@@ -15,6 +15,7 @@ install(
 
 install(PROGRAMS
   scripts/covariance_fixer_node.py
+  scripts/odom_tf_publisher.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

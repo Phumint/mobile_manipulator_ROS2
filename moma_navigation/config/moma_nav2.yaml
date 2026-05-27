@@ -6,7 +6,7 @@ amcl:
     base_frame_id: "base_footprint"
     global_frame_id: "map"
     odom_frame_id: "odom"
-    odom_topic: /odometry/filtered
+    odom_topic: /odom
     scan_topic: "/scan"
     
     # --- Initial Pose ---
@@ -23,16 +23,17 @@ amcl:
     # alpha4: 0.05 # Was 0.2
     # alpha5: 0.05 # Was 0.2 (Note: alpha5 is ONLY used if you set Omnidirectional above)
 
-    alpha1: 0.2 
-    alpha2: 0.2 
-    alpha3: 0.2 
-    alpha4: 0.2
+    alpha1: 0.02 
+    alpha2: 0.02 
+    alpha3: 0.02 
+    alpha4: 0.02
     
     # Dropping the max particles can reduce the load on your CPU
     min_particles: 500
     max_particles: 2000 
-    update_min_d: 0.20 # Update AMCL every 20cm
-    update_min_a: 0.20 # Update AMCL every ~11 degrees
+    update_min_d: 0.10   # 10 cm (was 20 cm)
+    update_min_a: 0.05   # ~3° (was ~11°)
+
     pf_err: 0.05
     pf_z: 0.99
     
@@ -72,7 +73,7 @@ controller_server:
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
     failure_tolerance: 0.3
-    odom_topic: "/odometry/filtered"
+    odom_topic: "/odom"
     progress_checker_plugin: "progress_checker"
     goal_checker_plugins: ["general_goal_checker"]
     controller_plugins: ["FollowPath"]
@@ -352,7 +353,7 @@ bt_navigator:
     use_sim_time: true
     global_frame: map
     robot_base_frame: base_footprint
-    odom_topic: /odometry/filtered # use /odom with the real robot
+    odom_topic: /odom
     bt_loop_duration: 100
     default_server_timeout: 20
 
@@ -372,7 +373,7 @@ velocity_smoother:
     min_velocity: [-0.05, 0.0, -0.1] # Slowed down reversing
     max_accel: [0.15, 0.0, 0.15]     # Gentle acceleration
     max_decel: [-0.2, 0.0, -0.2]     # Gentle braking to protect the UR10e
-    odom_topic: "/odometry/filtered"
+    odom_topic: "/odom"
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
     velocity_timeout: 1.0
