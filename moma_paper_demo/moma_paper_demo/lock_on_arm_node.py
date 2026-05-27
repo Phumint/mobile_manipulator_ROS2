@@ -49,6 +49,14 @@ from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
+# MoveIt collision-check service interface.
+try:
+    from moveit_msgs.msg import RobotState
+    from moveit_msgs.srv import GetStateValidity
+    _HAS_MOVEIT_MSGS = True
+except ImportError:
+    _HAS_MOVEIT_MSGS = False
+
 try:
     import roboticstoolbox as rtb
     _HAS_RTB = True
@@ -116,6 +124,26 @@ class LockOnArmNode(Node):
         self._max_joint_vel = self.get_parameter('max_joint_vel').value
         self._pos_hold_tol = self.get_parameter('pos_hold_tol').value
         self._rot_hold_tol = self.get_parameter('rot_hold_tol').value
+        self._velocity_filter_alpha = self.get_parameter('velocity_filter_alpha').value
+        # Safety
+        self._use_collision_check = self.get_parameter('use_collision_check').value
+        self._collision_check_rate = self.get_parameter('collision_check_rate').value
+        self._planning_group = self.get_parameter('planning_group').value
+        self._validity_service = self.get_parameter('validity_service').value
+        self._collision_lookahead = self.get_parameter('collision_lookahead').value
+        self._collision_clear_count = int(self.get_parameter('collision_clear_count').value)
+        self._use_reach_limit = self.get_parameter('use_reach_limit').value
+        self._max_reach_distance = self.get_parameter('max_reach_distance').value
+
+        # Latest commanded q_dot — exposed so the collision-check timer can
+        # forward-project q_desired by collision_lookahead seconds.
+        self._last_q_dot = np.zeros(6)
+        # State for the q_dot low-pass filter (exponential smoothing).
+        self._q_dot_filt = np.zeros(6)
+        # Hysteresis counter: increments on each consecutive 'valid' response;
+        # we only mark _collision_safe=True after collision_clear_count clears
+        # in a row.  Reset to 0 on any 'invalid' response.
+        self._consecutive_clears = self._collision_clear_count   # start unfrozen
         self._rate = self.get_parameter('control_rate').value
         self._map_frame = self.get_parameter('map_frame').value
         self._arm_base_frame = self.get_parameter('arm_base_frame').value
@@ -183,6 +211,31 @@ class LockOnArmNode(Node):
 
         self.add_on_set_parameters_callback(self._on_parameter_event)
 
+        # ── Collision-check setup ───────────────────────────────────────────
+        # Async service client for /check_state_validity.  A separate, slower
+        # timer fires the check; the control loop just reads the latest result
+        # so the 50 Hz loop is never blocked by service latency.
+        self._collision_safe = True                # optimistic until proven otherwise
+        self._collision_check_inflight = False     # prevents overlapping requests
+        self._validity_client = None
+        if self._use_collision_check:
+            if not _HAS_MOVEIT_MSGS:
+                self.get_logger().error(
+                    'moveit_msgs not available — install ros-humble-moveit-msgs '
+                    'or set use_collision_check=false.'
+                )
+            else:
+                self._validity_client = self.create_client(
+                    GetStateValidity, self._validity_service
+                )
+                self._collision_check_timer = self.create_timer(
+                    1.0 / max(self._collision_check_rate, 1.0),
+                    self._collision_check_tick,
+                )
+
+        # Reach-limit state — set by the control loop, read for freeze decisions.
+        self._reach_ok = True
+
         self._timer = self.create_timer(1.0 / self._rate, self._control_loop)
 
         pos_labels = ['X', 'Y', 'Z']
@@ -224,6 +277,12 @@ class LockOnArmNode(Node):
                 # Force re-anchor on the next control cycle so we start the
                 # internal integrator at the live joint state, not stale data.
                 self._q_desired = None
+                self._last_q_dot = np.zeros(6)
+                self._q_dot_filt = np.zeros(6)
+                # Clear sticky freeze state on every (re-)enable so stale
+                # collision flags from a previous run don't keep the arm stuck.
+                self._collision_safe = True
+                self._consecutive_clears = self._collision_clear_count
                 if not p.value:
                     self._publish_stop()
                 self.get_logger().info(
@@ -239,7 +298,21 @@ class LockOnArmNode(Node):
                         )
                         self._enabled = False
                     self._q_desired = None
+                    self._last_q_dot = np.zeros(6)
+                    # Clear freeze so the homing trajectory isn't blocked.
+                    self._collision_safe = True
+                    self._consecutive_clears = self._collision_clear_count
                     self._send_home()
+
+            elif p.name == 'force_unfreeze':
+                if p.value:
+                    self._collision_safe = True
+                    self._consecutive_clears = self._collision_clear_count
+                    self.get_logger().warning(
+                        'force_unfreeze=true — collision flag manually cleared. '
+                        'Arm will resume tracking on next cycle. USE WITH CAUTION '
+                        '(you have overridden the collision detector).'
+                    )
 
             elif p.name == 'k_p':
                 self._k_p = p.value
@@ -255,6 +328,29 @@ class LockOnArmNode(Node):
                 self._pos_hold_tol = p.value
             elif p.name == 'rot_hold_tol':
                 self._rot_hold_tol = p.value
+            elif p.name == 'velocity_filter_alpha':
+                self._velocity_filter_alpha = p.value
+                self._q_dot_filt = np.zeros(6)   # clear so old alpha's state doesn't bias
+
+            elif p.name in ('map_frame', 'arm_base_frame', 'ee_frame'):
+                # Update the stored frame ID and, if currently tracking,
+                # re-snapshot the target in the new frame (otherwise the
+                # captured target would still be in the old frame and the
+                # arm would drive to nonsense).
+                if p.name == 'map_frame':
+                    self._map_frame = p.value
+                elif p.name == 'arm_base_frame':
+                    self._arm_base_frame = p.value
+                elif p.name == 'ee_frame':
+                    self._ee_frame = p.value
+                self.get_logger().info(
+                    f'{p.name} updated to "{p.value}". '
+                    f'{"Re-snapshotting target in new frame..." if self._enabled else "Will apply on next enable."}'
+                )
+                if self._enabled and self._auto_capture:
+                    self._snapshot_current_ee_as_target()
+                    self._q_desired = None
+                    self._q_dot_filt = np.zeros(6)
 
             elif p.name in ('track_x', 'track_y', 'track_z',
                             'track_roll', 'track_pitch', 'track_yaw'):
@@ -344,6 +440,79 @@ class LockOnArmNode(Node):
         return True
 
     # ------------------------------------------------------------------
+    # Safety: collision and reach checks
+    # ------------------------------------------------------------------
+
+    def _collision_check_tick(self) -> None:
+        """Fire an async /check_state_validity for the predicted state.
+
+        Checks q_desired + q_dot·lookahead (not just q_desired) so the
+        round-trip latency of the async service call is compensated — by the
+        time the response arrives, we already know about the configuration
+        we'll be at, not the one we already passed through.
+        """
+        if not self._enabled or not self._use_collision_check:
+            return
+        if self._q_desired is None or not self._q_a_ready:
+            return
+        if self._validity_client is None or not self._validity_client.service_is_ready():
+            return
+        if self._collision_check_inflight:
+            return   # don't pile requests on top of each other
+
+        # Predict forward by lookahead so we see boundaries before crossing.
+        q_predicted = self._q_desired + self._last_q_dot * self._collision_lookahead
+
+        req = GetStateValidity.Request()
+        rs = RobotState()
+        rs.is_diff = True
+        rs.joint_state.name = list(_UR10E_JOINT_NAMES)
+        rs.joint_state.position = q_predicted.tolist()
+        req.robot_state = rs
+        req.group_name = self._planning_group
+
+        self._collision_check_inflight = True
+        future = self._validity_client.call_async(req)
+        future.add_done_callback(self._on_validity_response)
+
+    def _on_validity_response(self, future) -> None:
+        self._collision_check_inflight = False
+        try:
+            result = future.result()
+        except Exception as e:
+            self.get_logger().warning(
+                f'Collision-check service failed: {e}', throttle_duration_sec=2.0
+            )
+            return
+
+        was_safe = self._collision_safe
+
+        if result.valid:
+            # Count consecutive clears.  Only resume after enough in a row to
+            # confirm we're not just bouncing across the collision boundary.
+            self._consecutive_clears += 1
+            if self._consecutive_clears >= self._collision_clear_count:
+                self._collision_safe = True
+        else:
+            # Any single failure reverts us to frozen immediately.
+            self._consecutive_clears = 0
+            self._collision_safe = False
+
+        if was_safe and not self._collision_safe:
+            contacts = ', '.join(
+                f'{c.contact_body_1} ↔ {c.contact_body_2}'
+                for c in (result.contacts or [])
+            ) or '(no contact details from MoveIt)'
+            self.get_logger().warning(
+                f'COLLISION predicted — freezing arm. {contacts}'
+            )
+        elif not was_safe and self._collision_safe:
+            self.get_logger().info(
+                f'Collision clear ({self._collision_clear_count} consecutive '
+                f'checks) — resuming tracking.'
+            )
+
+    # ------------------------------------------------------------------
     # Control loop
     # ------------------------------------------------------------------
 
@@ -360,6 +529,47 @@ class LockOnArmNode(Node):
         # Arm base rotation in world frame (changes as MiR moves — the data-exchange link).
         oTa_tf = self._lookup_transform(self._map_frame, self._arm_base_frame)
         if oTa_tf is None:
+            return
+
+        # ── Reach limit check ───────────────────────────────────────────────
+        # If the MiR has driven the arm base too far from the captured EE
+        # target, no joint configuration can reach it — freeze before the arm
+        # starts straining at the workspace edge.
+        if self._use_reach_limit:
+            arm_base_pos = np.array([
+                oTa_tf.transform.translation.x,
+                oTa_tf.transform.translation.y,
+                oTa_tf.transform.translation.z,
+            ])
+            target_to_base = float(np.linalg.norm(self._target - arm_base_pos))
+            self._reach_ok = target_to_base <= self._max_reach_distance
+            if not self._reach_ok:
+                self.get_logger().warning(
+                    f'OUT OF REACH: target is {target_to_base:.2f} m from arm base '
+                    f'(limit {self._max_reach_distance:.2f} m). Freezing arm. '
+                    f'Drive MiR closer to recover.',
+                    throttle_duration_sec=1.0,
+                )
+                self._q_desired = self._q_a.copy()
+                self._publish_stop()
+                return
+
+        # ── Collision freeze ────────────────────────────────────────────────
+        if self._use_collision_check and not self._collision_safe:
+            self.get_logger().warning(
+                'COLLISION predicted — arm frozen. The arm is stuck in a '
+                'configuration that intersects an obstacle (the box moves '
+                'with the MiR — driving will NOT clear arm-vs-box collisions). '
+                'Recover with: ros2 param set /lock_on_arm_node go_home true',
+                throttle_duration_sec=2.0,
+            )
+            # Re-anchor desired to actual AND zero the cached velocity so the
+            # collision-check timer probes the current static configuration
+            # instead of forward-projecting along the stale q_dot that caused
+            # the freeze.
+            self._q_desired = self._q_a.copy()
+            self._last_q_dot = np.zeros(6)
+            self._publish_stop()
             return
 
         oRa = Rotation.from_quat([
@@ -442,6 +652,19 @@ class LockOnArmNode(Node):
             q_dot = q_dot + null_proj @ q_dot_posture
 
         q_dot = self._clamp_velocity(q_dot)
+
+        # --- Output low-pass filter ---
+        # Attenuates AMCL jumps, joint state noise, and arm/base reaction
+        # coupling without changing low-frequency tracking behaviour.
+        alpha = self._velocity_filter_alpha
+        if 0.0 < alpha < 1.0:
+            self._q_dot_filt = alpha * q_dot + (1.0 - alpha) * self._q_dot_filt
+            q_dot = self._q_dot_filt
+        else:
+            self._q_dot_filt = q_dot
+
+        # Cache for the collision-check timer (used to forward-predict q_desired).
+        self._last_q_dot = q_dot.copy()
 
         # --- Internal desired-position integrator ---
         dt = 1.0 / self._rate
@@ -581,12 +804,41 @@ class LockOnArmNode(Node):
         self.declare_parameter('pos_hold_tol', 0.002)   # 2 mm
         self.declare_parameter('rot_hold_tol', 0.02)    # ~1.1 deg
         self.declare_parameter('control_rate', 20.0)
+        # Output low-pass filter on q_dot.  alpha ∈ (0, 1]:
+        #   1.0 = no filtering (raw controller output)
+        #   0.3 = ~60 ms time constant @ 50 Hz — smooths AMCL jumps without
+        #         meaningfully delaying tracking of slow MiR motion
+        #   0.1 = heavy smoothing, noticeable tracking lag
+        self.declare_parameter('velocity_filter_alpha', 0.3)
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('arm_base_frame', 'ur_base_link')
         self.declare_parameter('ee_frame', 'ur_tool0')
         self.declare_parameter('enabled', False)
         # Write-only trigger: set to true to move arm to SRDF Home over 5 s.
         self.declare_parameter('go_home', False)
+        # Write-only trigger: set to true to manually clear a stuck freeze.
+        # Use with caution — this bypasses the collision detector for one cycle.
+        self.declare_parameter('force_unfreeze', False)
+
+        # ── Safety: MoveIt collision check ──────────────────────────────────
+        # Async query to /check_state_validity (provided by move_group).
+        # If the predicted q_desired is in collision, the arm freezes.
+        self.declare_parameter('use_collision_check', True)
+        self.declare_parameter('collision_check_rate', 10.0)   # Hz
+        self.declare_parameter('planning_group', 'ur_manipulator')
+        self.declare_parameter('validity_service', '/check_state_validity')
+        # How far ahead (s) of q_desired the validity check looks.  Compensates
+        # for the round-trip latency of the async service call so the arm
+        # actually slows BEFORE entering the collision zone.
+        self.declare_parameter('collision_lookahead', 0.2)
+        # Consecutive 'valid' responses required before resuming after a freeze.
+        # Prevents flicker when the arm is sitting on a collision boundary.
+        self.declare_parameter('collision_clear_count', 3)
+        # ── Safety: reach limit ─────────────────────────────────────────────
+        # Freeze if the EE target drifts further than this from the arm base.
+        # UR10e reach is 1.30 m — leave headroom for orientation tracking.
+        self.declare_parameter('use_reach_limit', True)
+        self.declare_parameter('max_reach_distance', 1.10)     # m
 
 
 def main() -> None:

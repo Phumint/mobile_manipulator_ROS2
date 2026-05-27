@@ -54,7 +54,7 @@ lock_on_arm_node:
     # X = forward (robot's direction of travel) — leave free so arm doesn't fight motion.
     # Y = lateral — TRACK this to cancel the sine-wave oscillation.
     # Z = height  — TRACK this to hold the EE at a fixed height.
-    track_x: false
+    track_x: true
     track_y: true
     track_z: true
 
@@ -79,7 +79,7 @@ lock_on_arm_node:
 
     # Damped-least-squares regularization factor.
     # Lower = sharper response, less smoothing near singularities.  Was 0.05.
-    damping: 0.02
+    damping: 0.01
 
     # Per-joint velocity limit [rad/s] — output is scaled if any joint exceeds this.
     # UR10e hardware limits are 2.094 rad/s (shoulder/lift) and 3.14 rad/s (elbow/wrists);
@@ -88,15 +88,50 @@ lock_on_arm_node:
 
     # Hold tolerances — once both errors are below these, the node holds position.
     # Lower → tighter tracking but more steady-state activity.
-    pos_hold_tol: 0.002   # 2 mm
-    rot_hold_tol: 0.02    # ~1.1 deg
+    pos_hold_tol: 0.001   # 1 mm was 2
+    rot_hold_tol: 0.01    # ~0.57 deg, was ~1.1 deg
 
     # Control loop rate [Hz].  Higher rate = tighter feedback + smaller per-step
     # commands → smoother, faster tracking.  Was 20.0.
     control_rate: 50.0
 
+    # Output low-pass filter on q_dot.  alpha ∈ (0, 1]:
+    #   1.0  = no filtering (raw controller output)
+    #   0.3  = ~60 ms time constant @ 50 Hz — smooths AMCL jumps and arm/base
+    #          reaction coupling without meaningful tracking lag
+    #   0.1  = heavy smoothing, noticeable tracking lag
+    # Lower this if the arm visibly rocks back and forth from AMCL pose
+    # corrections; set to 1.0 to disable filtering.
+    velocity_filter_alpha: 0.3
+
     # Set to true to start arm tracking (or use `ros2 param set`).
     enabled: false
+
+    # ── Safety: MoveIt collision checking ──────────────────────────────────
+    # Calls /check_state_validity on move_group to test whether the next
+    # commanded joint configuration is in collision (arm vs self, arm vs
+    # mounting box, arm vs anything in the planning scene).  On collision,
+    # the arm freezes until the next check clears.  Requires moma_nav_moveit
+    # to be running.
+    use_collision_check: true
+    collision_check_rate: 10.0          # Hz, runs on its own timer
+    planning_group: ur_manipulator
+    validity_service: /check_state_validity
+    # Predictive horizon — the check examines q_desired + q_dot * this (seconds).
+    # Should be ≥ service round-trip latency (~80–150 ms) so the arm slows
+    # BEFORE entering the collision zone, not after.
+    collision_lookahead: 0.2
+    # Hysteresis: consecutive 'valid' responses required to resume after a
+    # freeze.  Stops boundary flicker.  3 clears at 10 Hz = 300 ms minimum
+    # frozen time once collision is detected.
+    collision_clear_count: 3
+
+    # ── Safety: reach limit ───────────────────────────────────────────────
+    # Freeze if the captured EE target drifts further than this from the arm
+    # base.  UR10e physical reach is 1.30 m; leave headroom for orientation
+    # tracking and for the arm not to operate right at its workspace edge.
+    use_reach_limit: true
+    max_reach_distance: 1.10            # m
 
     # TF frame IDs — must match moma_description and moma_moveit_config.
     map_frame: map
