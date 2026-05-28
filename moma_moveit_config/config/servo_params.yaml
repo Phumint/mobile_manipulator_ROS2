@@ -52,7 +52,7 @@ cartesian_command_in_topic: ~/delta_twist_cmds
 joint_command_in_topic: ~/delta_joint_cmds
 joint_topic: /joint_states
 status_topic: ~/status
-command_out_topic: /ur_manipulator_controller/joint_trajectory
+command_out_topic: /joint_trajectory_controller/joint_trajectory
 
 ## Collision checking
 check_collisions: true

@@ -206,7 +206,7 @@ class LockOnArmNode(Node):
             JointState, '/joint_states', self._joint_states_cb, 10
         )
         self._traj_pub = self.create_publisher(
-            JointTrajectory, '/ur_manipulator_controller/joint_trajectory', 10
+            JointTrajectory, '/joint_trajectory_controller/joint_trajectory', 10
         )
 
         self.add_on_set_parameters_callback(self._on_parameter_event)

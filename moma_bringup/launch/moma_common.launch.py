@@ -71,7 +71,9 @@ def generate_launch_description():
             'tf_prefix': 'ur_',
             'use_fake_hardware': 'false',
             # Use the same controller name as simulation so MoveIt config is identical
-            'initial_joint_controller': 'ur_manipulator_controller',
+            'initial_joint_controller': 'joint_trajectory_controller',
+            'launch_rviz': 'false',
+            'launch_robot_state_publisher': 'false',
             # Pass your unified URDF to the UR driver so it knows about the MiR base
             'description_package': 'moma_description',
             'description_file': 'moma.urdf.xacro',
@@ -93,7 +95,7 @@ def generate_launch_description():
     arm_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['ur_manipulator_controller',
+        arguments=['joint_trajectory_controller',
                    '--controller-manager', '/controller_manager'],
         condition=IfCondition(use_sim)
     )
