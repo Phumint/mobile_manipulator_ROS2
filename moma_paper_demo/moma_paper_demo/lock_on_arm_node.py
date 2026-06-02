@@ -45,6 +45,7 @@ import rclpy
 import rclpy.time
 from rclpy.node import Node
 import tf2_ros
+from geometry_msgs.msg import PoseStamped
 from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
@@ -208,6 +209,13 @@ class LockOnArmNode(Node):
         self._traj_pub = self.create_publisher(
             JointTrajectory, '/joint_trajectory_controller/joint_trajectory', 10
         )
+
+        # Diagnostic publishers for visualization (RViz / PlotJuggler).
+        # Topics resolve under the node's private namespace:
+        #   /lock_on_arm_node/ee_pose, /target_pose, /q_desired
+        self._ee_pose_pub = self.create_publisher(PoseStamped, '~/ee_pose', 10)
+        self._target_pose_pub = self.create_publisher(PoseStamped, '~/target_pose', 10)
+        self._q_desired_pub = self.create_publisher(JointState, '~/q_desired', 10)
 
         self.add_on_set_parameters_callback(self._on_parameter_event)
 
@@ -619,6 +627,7 @@ class LockOnArmNode(Node):
             # Re-anchor desired to actual so we don't drift while idle.
             self._q_desired = self._q_a.copy()
             self._publish_stop()
+            self._publish_diagnostics(oTe_tf, np.zeros(6))
             return
 
         # --- Build combined task Jacobian and stacked error vector ---
@@ -680,6 +689,7 @@ class LockOnArmNode(Node):
             self._q_desired = self._q_a + lead * (self._max_desired_lead / lead_norm)
 
         self._publish_arm_cmd(q_dot)
+        self._publish_diagnostics(oTe_tf, q_dot)
 
         q_dot_max = float(np.max(np.abs(q_dot)))
         sat_pct = 100.0 * q_dot_max / self._max_joint_vel if self._max_joint_vel > 0 else 0.0
@@ -719,6 +729,49 @@ class LockOnArmNode(Node):
 
         msg.points = [pt]
         self._traj_pub.publish(msg)
+
+    def _publish_diagnostics(self, ee_tf, q_dot: np.ndarray) -> None:
+        """Publish controller signals for visualization (RViz / PlotJuggler).
+
+        Three topics, all stamped with the current clock:
+          ~/ee_pose      current EE pose in the map frame (PoseStamped)
+          ~/target_pose  the locked-on target pose in the map frame (PoseStamped)
+          ~/q_desired    commanded joint state — position=q_desired, velocity=q_dot
+                         (overlay against /joint_states to see tracking lag)
+        """
+        now = self.get_clock().now().to_msg()
+
+        # Current EE pose — reuse the map → ee_frame TF already looked up this cycle.
+        ee_msg = PoseStamped()
+        ee_msg.header.stamp = now
+        ee_msg.header.frame_id = self._map_frame
+        ee_msg.pose.position.x = ee_tf.transform.translation.x
+        ee_msg.pose.position.y = ee_tf.transform.translation.y
+        ee_msg.pose.position.z = ee_tf.transform.translation.z
+        ee_msg.pose.orientation = ee_tf.transform.rotation
+        self._ee_pose_pub.publish(ee_msg)
+
+        # Locked-on target pose (self._target_R is a 3x3 rotation matrix).
+        target_msg = PoseStamped()
+        target_msg.header.stamp = now
+        target_msg.header.frame_id = self._map_frame
+        target_msg.pose.position.x = float(self._target[0])
+        target_msg.pose.position.y = float(self._target[1])
+        target_msg.pose.position.z = float(self._target[2])
+        tq = Rotation.from_matrix(self._target_R).as_quat()   # [x, y, z, w]
+        target_msg.pose.orientation.x = float(tq[0])
+        target_msg.pose.orientation.y = float(tq[1])
+        target_msg.pose.orientation.z = float(tq[2])
+        target_msg.pose.orientation.w = float(tq[3])
+        self._target_pose_pub.publish(target_msg)
+
+        # Commanded joint state: positions = q_desired (integrator), velocities = q_dot.
+        cmd_msg = JointState()
+        cmd_msg.header.stamp = now
+        cmd_msg.name = list(_UR10E_JOINT_NAMES)
+        cmd_msg.position = self._q_desired.tolist()
+        cmd_msg.velocity = q_dot.tolist()
+        self._q_desired_pub.publish(cmd_msg)
 
     def _publish_stop(self) -> None:
         """Send the current joint position as a hold trajectory."""
