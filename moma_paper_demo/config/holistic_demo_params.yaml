@@ -134,6 +134,6 @@ lock_on_arm_node:
     max_reach_distance: 1.10            # m
 
     # TF frame IDs — must match moma_description and moma_moveit_config.
-    map_frame: map
+    map_frame: odom
     arm_base_frame: ur_base_link
     ee_frame: ur_tool0
