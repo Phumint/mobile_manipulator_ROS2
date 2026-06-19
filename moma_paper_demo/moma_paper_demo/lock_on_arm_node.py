@@ -23,7 +23,7 @@ position — demonstrating holistic data exchange between the two robots.
 
 Output
 ------
-Publishes JointTrajectory directly to /ur_manipulator_controller/joint_trajectory.
+Publishes JointTrajectory directly to /joint_trajectory_controller/joint_trajectory.
 Each cycle integrates the Jacobian velocity solution one time-step forward and
 sends a 1-point trajectory.  The controller interpolates smoothly between points.
 

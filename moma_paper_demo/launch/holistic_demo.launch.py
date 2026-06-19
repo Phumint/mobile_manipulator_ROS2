@@ -9,7 +9,7 @@ This launch file is Step 3 of the demo startup sequence:
 Nodes started by this file:
   - sine_wave_base_node: open-loop feedforward cmd_vel for the MiR sine wave path
   - lock_on_arm_node   : Jacobian arm controller, publishes JointTrajectory directly
-                         to /ur_manipulator_controller/joint_trajectory (no Servo needed)
+                         to /joint_trajectory_controller/joint_trajectory (no Servo needed)
 
 Both nodes start with enabled:=false (safe default — does not conflict with Nav2).
 Enable them when ready:

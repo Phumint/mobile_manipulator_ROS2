@@ -78,7 +78,7 @@ ros2 launch moma_paper_demo demo.launch.py use_sim:=false
 
 `demo.launch.py` starts both MoveIt Servo (`servo_node_main`) and the QP controller node.
 MoveIt Servo converts `JointJog` commands from the controller into `JointTrajectory`
-messages for `ur_manipulator_controller`, so no separate servo launch step is needed.
+messages for `joint_trajectory_controller`, so no separate servo launch step is needed.
 
 ### Changing the goal
 

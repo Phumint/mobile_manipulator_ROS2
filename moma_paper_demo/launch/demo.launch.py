@@ -20,7 +20,7 @@ def generate_launch_description():
       3. ros2 launch moma_paper_demo demo.launch.py          use_sim:=<true|false>
 
     Step 3 (this file) starts two nodes:
-      - servo_node   : MoveIt Servo converts JointJog → JointTrajectory → ur_manipulator_controller
+      - servo_node   : MoveIt Servo converts JointJog → JointTrajectory → joint_trajectory_controller
       - controller_node : QP whole-body controller, publishes to /cmd_vel and /servo_node/delta_joint_cmds
     """
     use_sim = LaunchConfiguration('use_sim')
