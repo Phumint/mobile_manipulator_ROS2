@@ -725,7 +725,7 @@ class LockOnArmNode(Node):
         pt.velocities = q_dot.tolist()
         # 2× dt gives the controller a stable horizon to interpolate over while
         # we publish the next update one cycle later.
-        pt.time_from_start = Duration(sec=0, nanosec=int(2 * dt * 1e9))
+        pt.time_from_start = Duration(sec=0, nanosec=int(dt * 1e9))
 
         msg.points = [pt]
         self._traj_pub.publish(msg)

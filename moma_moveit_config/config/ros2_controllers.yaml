@@ -14,6 +14,14 @@ joint_state_broadcaster:
 
 joint_trajectory_controller:
   ros__parameters:
+    # Continue each new trajectory from the LAST COMMANDED state instead of the
+    # measured joint state. lock_on_arm_node already integrates a smooth,
+    # monotonic q_desired and streams 1-point trajectories at 50 Hz; closed-loop
+    # mode re-anchored every spline to the lagging /joint_states, breaking the
+    # (Δp, v_end, dt) consistency and producing jagged, boosted velocity.
+    # Open-loop chains the splines (spline[k] starts where spline[k-1] ended),
+    # giving a flat constant-velocity command. See docs/jtc_open_loop_explained.md.
+    open_loop_control: true
     joints:
       - ur_shoulder_pan_joint
       - ur_shoulder_lift_joint

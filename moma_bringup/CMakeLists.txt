@@ -19,7 +19,7 @@ install(
 # Install launch and config folders
 install(
   DIRECTORY
-    launch rviz scripts
+    launch rviz scripts config
   DESTINATION share/${PROJECT_NAME}
 )
 

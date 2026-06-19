@@ -72,6 +72,10 @@ def generate_launch_description():
             'use_fake_hardware': 'false',
             # Use the same controller name as simulation so MoveIt config is identical
             'initial_joint_controller': 'joint_trajectory_controller',
+            # Use our copy of the UR controllers config (adds open_loop_control:
+            # true for smooth streaming from lock_on_arm_node). runtime_config_package
+            # also governs <ur_type>_update_rate.yaml, so that file is copied alongside.
+            'runtime_config_package': 'moma_bringup',
             'launch_rviz': 'false',
             'launch_robot_state_publisher': 'false',
             # Pass your unified URDF to the UR driver so it knows about the MiR base
