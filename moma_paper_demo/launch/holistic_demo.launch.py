@@ -7,13 +7,19 @@ This launch file is Step 3 of the demo startup sequence:
   3. ros2 launch moma_paper_demo holistic_demo.launch.py use_sim:=<true|false>
 
 Nodes started by this file:
-  - sine_wave_base_node: open-loop feedforward cmd_vel for the MiR sine wave path
+  - sine_wave_base_node: open-loop feedforward cmd_vel for an optional, repeatable
+                         scripted sine-wave path — NOT used by the default demo.
   - lock_on_arm_node   : Jacobian arm controller, publishes JointTrajectory directly
                          to /joint_trajectory_controller/joint_trajectory (no Servo needed)
 
+Default demo: enable lock_on_arm_node only, then drive the MiR by hand with a
+teleop tool (e.g. teleop_twist_keyboard) publishing directly to /cmd_vel. The EE
+stays locked on its fixed odom-frame pose while you drive the base around freely.
+  ros2 param set /lock_on_arm_node enabled true
+
+Optional scripted-path testing: also enable sine_wave_base_node instead of (or
+in addition to) manual teleop, for a repeatable open-loop sine trajectory.
 Both nodes start with enabled:=false (safe default — does not conflict with Nav2).
-Enable them when ready:
-  ros2 param set /lock_on_arm_node    enabled true
   ros2 param set /sine_wave_base_node enabled true
 """
 from launch import LaunchDescription

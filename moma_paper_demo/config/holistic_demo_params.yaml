@@ -2,12 +2,17 @@
 # holistic_demo_params.yaml
 #
 # Parameters for the two-node holistic demo:
-#   - sine_wave_base_node : drives the MiR in a sine wave trajectory
-#   - lock_on_arm_node    : keeps the UR10e EE at a fixed world-frame point
+#   - lock_on_arm_node    : keeps the UR10e EE completely still at a fixed
+#                           odom-frame pose while the MiR drives underneath it
+#   - sine_wave_base_node : OPTIONAL — open-loop scripted sine-wave path, for
+#                           repeatable testing only. The default demo instead
+#                           drives the MiR by hand via teleop cmd_vel while
+#                           lock_on_arm_node holds the EE still.
 #
 # Both nodes start with enabled: false so they don't conflict with Nav2.
-# Enable each one when you are ready:
+# Default demo — enable only the arm, then teleop the base by hand:
 #   ros2 param set /lock_on_arm_node    enabled true
+# Optional scripted-path testing — also/instead enable the sine wave node:
 #   ros2 param set /sine_wave_base_node enabled true
 ###############################################################################
 
@@ -35,7 +40,7 @@ sine_wave_base_node:
 lock_on_arm_node:
   ros__parameters:
 
-    # Desired EE position in the map/world frame [m].
+    # Desired EE position in the odom/world frame [m].
     # Set this to a point the arm can reach throughout the full sine wave sweep.
     # With the MiR starting near the origin and the arm ~0.6 m above the base,
     # (0.5, 0.0, 1.2) puts the target directly in front and at a comfortable height.
@@ -51,16 +56,16 @@ lock_on_arm_node:
     auto_capture_target: true
 
     # Which world-frame POSITION axes to control.
-    # X = forward (robot's direction of travel) — leave free so arm doesn't fight motion.
-    # Y = lateral — TRACK this to cancel the sine-wave oscillation.
-    # Z = height  — TRACK this to hold the EE at a fixed height.
+    # All three are tracked for this demo: the EE holds a completely fixed
+    # point in odom while the MiR drives its full sine wave underneath it,
+    # including the forward (X) component.
     track_x: true
     track_y: true
     track_z: true
 
-    # Which world-frame ORIENTATION axes to control (in map frame).
-    # Tracking all three keeps the EE pointing the same way as the MiR yaws
-    # along the sine wave — otherwise the EE would tilt with the base.
+    # Which world-frame ORIENTATION axes to control (in odom frame).
+    # Tracking all three keeps the EE pointing the same way regardless of how
+    # the MiR yaws along the sine wave — otherwise the EE would tilt with the base.
     track_roll: true
     track_pitch: true
     track_yaw: true

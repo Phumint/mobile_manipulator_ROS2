@@ -2,11 +2,13 @@
 
 Demo concept
 ------------
-The MiR drives forward (world X) while oscillating laterally (world Y) in a sine
-wave.  The arm tracks a fixed (Y, Z) position AND a fixed orientation in the
-world frame — keeping the EE on a straight horizontal line, pointing the same
-way regardless of how the base rotates — while X is left unconstrained so the
-arm rides forward with the robot naturally.
+By default the MiR is driven by hand via teleop cmd_vel (any path the operator
+chooses) while the arm holds the EE completely still: a fixed (X, Y, Z)
+position AND a fixed orientation in the world frame (odom by default — see
+map_frame param). All three position axes and all three orientation axes are
+tracked, so the EE does not move at all while the base drives underneath/
+around it. A scripted sine-wave path (sine_wave_base_node) is also available
+as an optional, repeatable alternative to manual teleop for testing.
 
 Only the tracked axes contribute rows to the Jacobian, so the damped-least-squares
 solution minimises joint motion while correcting only the controlled dimensions.
@@ -93,9 +95,10 @@ class LockOnArmNode(Node):
            q̇   = q̇_p + (I − J† J) · k_ns · (q_ref − q)
       6. Clamps per-joint velocities and publishes a 1-point JointTrajectory.
 
-    Default: track_x=false, track_y=true, track_z=true.
-    The EE rides forward (X) with the robot while the arm cancels the sine-wave
-    lateral oscillation (Y) and holds fixed height (Z).
+    Class default: track_x=false, track_y=true, track_z=true (rides forward
+    with the robot). The demo overrides this via holistic_demo_params.yaml to
+    track_x=true as well, so the EE is held completely still in all 6 DOF
+    while the MiR drives its full sine-wave path underneath it.
     """
 
     def __init__(self) -> None:

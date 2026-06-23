@@ -1,9 +1,10 @@
 """Drives the MiR base in a sine wave trajectory via open-loop feedforward cmd_vel.
 
-The node computes the exact angular velocity feedforward required for a non-holonomic
-robot to trace y(x) = A * sin(2π * x / λ) in the world frame, given constant forward
-speed v.  Both nodes in this demo (this one and lock_on_arm_node) read the TF tree,
-demonstrating that the AMR and cobot continuously share pose data.
+OPTIONAL node — not used by the default holistic demo. The default demo drives
+the MiR by hand via teleop cmd_vel instead, while lock_on_arm_node holds the EE
+still. This node exists for repeatable, scripted-path testing: it computes the
+exact angular velocity feedforward required for a non-holonomic robot to trace
+y(x) = A * sin(2π * x / λ) in the world frame, given constant forward speed v.
 
 Prerequisites:
   1. ros2 launch moma_bringup moma_system.launch.py      use_sim:=<true|false>
