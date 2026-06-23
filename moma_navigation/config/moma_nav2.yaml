@@ -49,7 +49,7 @@ amcl:
     laser_likelihood_max_dist: 2.0 # max dist for likelihood of a mapped wall
     # laser_max_range: 5.0  # Force AMCL to ignore anything further than your map's range
     save_pose_rate: 10.0      # Increased from default
-    transform_tolerance: 5.0 # Increased to handle simulation jitter
+    transform_tolerance: 1.0 # Nav2 default
 
 map_server:
   ros__parameters:
