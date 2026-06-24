@@ -552,7 +552,14 @@ class LockOnArmNode(Node):
                 oTa_tf.transform.translation.y,
                 oTa_tf.transform.translation.z,
             ])
-            target_to_base = float(np.linalg.norm(self._target - arm_base_pos))
+            # Only count tracked position axes — an untracked axis (e.g. X
+            # freed for a Nav2 drive-forward test) has no target the EE is
+            # trying to reach, so its distance to the moving arm base is not
+            # a meaningful reachability signal and must not trip the freeze.
+            reach_axes = self._tracked_axes if self._tracked_axes else [0, 1, 2]
+            target_to_base = float(
+                np.linalg.norm((self._target - arm_base_pos)[reach_axes])
+            )
             self._reach_ok = target_to_base <= self._max_reach_distance
             if not self._reach_ok:
                 self.get_logger().warning(
