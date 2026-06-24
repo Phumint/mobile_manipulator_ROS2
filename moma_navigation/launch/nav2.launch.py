@@ -21,11 +21,18 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration('use_rviz', default='true')
 
     # --- The "Agnostic" Magic: RewrittenYaml ---
-    # This automatically intercepts the YAML file and overwrites 'use_sim_time' 
+    # This automatically intercepts the YAML file and overwrites 'use_sim_time'
     # and 'autostart' so you don't have to maintain separate YAMLs for Sim vs Real Hardware.
+    # Same mechanism resolves the custom behavior trees (no <Spin/> recovery,
+    # unsafe for the MiR100's rectangular footprint) to an absolute path.
+    bt_xml_dir = PathJoinSubstitution([moma_nav_dir, 'config', 'behavior_trees'])
     param_substitutions = {
         'use_sim_time': use_sim_time,
-        'autostart': autostart
+        'autostart': autostart,
+        'default_nav_to_pose_bt_xml': PathJoinSubstitution(
+            [bt_xml_dir, 'navigate_to_pose_w_replanning_and_recovery_no_spin.xml']),
+        'default_nav_through_poses_bt_xml': PathJoinSubstitution(
+            [bt_xml_dir, 'navigate_through_poses_w_replanning_and_recovery_no_spin.xml']),
     }
 
     configured_params = RewrittenYaml(
