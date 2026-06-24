@@ -20,6 +20,7 @@ _rviz_ld_path = ':'.join(
 def generate_launch_description():
     # 1. Arguments & Configurations
     use_sim = LaunchConfiguration('use_sim')
+    map_yaml_file = LaunchConfiguration('map')
 
     # Build MoveIt Config (shared by MoveGroup and RViz).
     # Both OMPL (collision-aware, probabilistic) and Pilz (analytical IK,
@@ -43,7 +44,8 @@ def generate_launch_description():
         ),
         launch_arguments={
             'use_sim_time': use_sim,
-            'use_rviz': 'false'
+            'use_rviz': 'false',
+            'map': map_yaml_file,
         }.items()
     )
 
@@ -81,6 +83,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('use_sim', default_value='true', description='Use simulation time if true'),
+        DeclareLaunchArgument('map', default_value='', description='Full path to map yaml file to load'),
         nav2_launch,
         move_group_node,
         rviz_node,
