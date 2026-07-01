@@ -32,7 +32,6 @@ amcl:
     pf_err: 0.05
     pf_z: 0.99
     
-    laser_min_range: 0.50  # Ignore the box and the UR10e base
     laser_max_range: 10.0  # Ignore "dust" or long-range noise
 
     laser_model_type: "likelihood_field" 
@@ -141,6 +140,9 @@ local_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          inf_is_valid: true        # treat "no return" (inf) as clear-to-max-range so ghosts get cleared
+          obstacle_max_range: 3.0   # mark obstacles up to 3 m
+          raytrace_max_range: 4.0   # clear up to 4 m (must be >= obstacle_max_range)
           
         scan_back:
           topic: /b_scan
@@ -148,6 +150,9 @@ local_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          inf_is_valid: true        # treat "no return" (inf) as clear-to-max-range so ghosts get cleared
+          obstacle_max_range: 3.0   # mark obstacles up to 3 m
+          raytrace_max_range: 4.0   # clear up to 4 m (must be >= obstacle_max_range)
 
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -186,6 +191,9 @@ global_costmap:
           clearing: True
           marking: True   
           data_type: "LaserScan"
+          inf_is_valid: true        # treat "no return" (inf) as clear-to-max-range so ghosts get cleared
+          obstacle_max_range: 3.0   # mark obstacles up to 3 m
+          raytrace_max_range: 4.0   # clear up to 4 m (must be >= obstacle_max_range)
 
         scan_back:
           topic: /b_scan
@@ -193,6 +201,9 @@ global_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
+          inf_is_valid: true        # treat "no return" (inf) as clear-to-max-range so ghosts get cleared
+          obstacle_max_range: 3.0   # mark obstacles up to 3 m
+          raytrace_max_range: 4.0   # clear up to 4 m (must be >= obstacle_max_range)
 
       inflation_layer: # should be identical as the local costmap's inflation layer
         plugin: "nav2_costmap_2d::InflationLayer"
