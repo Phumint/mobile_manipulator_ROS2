@@ -78,7 +78,7 @@ _UR10E_JOINT_NAMES = [
 
 # SRDF "Home" state for ur_manipulator — used as default reference posture and
 # for go_home recovery.  In order: pan, lift, elbow, wrist1, wrist2, wrist3.
-_HOME_JOINTS = np.array([-0.7853, -1.5000, 2.3561, 0.0, 0.0, 0.0])
+_HOME_JOINTS = np.array([-0.6247, -1.5803, 1.8271, -0.1842, -0.5924, -1.6335])
 
 
 class LockOnArmNode(Node):
