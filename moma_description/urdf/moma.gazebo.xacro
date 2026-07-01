@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Mount box visual material -->
+  <gazebo reference="mount_box_link">
+    <material>Gazebo/DarkGrey</material>
+  </gazebo>
+
+  <!-- Simulation-only plugins -->
+  <xacro:if value="$(arg sim_ignition)">
+    <gazebo>
+      <plugin filename="ign_ros2_control-system"
+              name="ign_ros2_control::IgnitionROS2ControlPlugin">
+        <parameters>$(find moma_moveit_config)/config/ros2_controllers.yaml</parameters>
+      </plugin>
+
+      <!-- Ground-truth-physics odometry — replaces diff_drive's lying /odom under wall contact. -->
+      <plugin filename="ignition-gazebo-odometry-publisher-system"
+              name="ignition::gazebo::systems::OdometryPublisher">
+        <odom_frame>odom</odom_frame>
+        <robot_base_frame>base_footprint</robot_base_frame>
+        <odom_topic>odom_gt</odom_topic>
+        <dimensions>2</dimensions>
+      </plugin>
+    </gazebo>
+  </xacro:if>
+
+</robot>
